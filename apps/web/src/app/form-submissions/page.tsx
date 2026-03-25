@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { api, fetchApi } from '@/lib/api'
+import { fetchApi } from '@/lib/api'
 import Header from '@/components/layout/header'
 import { useAccount } from '@/contexts/account-context'
 
@@ -56,20 +56,13 @@ export default function FormSubmissionsPage() {
         setFieldLabels(labels)
       }
 
-      const res = await fetchApi<{ success: boolean; data: Submission[] }>(`/api/forms/${formId}/submissions`)
+      const res = await fetchApi<{ success: boolean; data: (Submission & { friend_name?: string })[] }>(`/api/forms/${formId}/submissions`)
       if (res.success) {
-        const friendRes = await api.friends.list({ accountId: selectedAccountId || undefined, limit: '800' })
-        const friendMap = new Map<string, string>()
-        if (friendRes.success) {
-          for (const f of (friendRes.data as unknown as { items: { id: string; displayName: string }[] }).items) {
-            friendMap.set(f.id, f.displayName)
-          }
-        }
         setSubmissions(res.data.map((s) => ({
           ...s,
           data: typeof s.data === 'string' ? JSON.parse(s.data) : s.data,
-          friendName: s.friendId ? friendMap.get(s.friendId) || '不明' : '不明',
-        })).reverse())
+          friendName: s.friend_name || '不明',
+        })))
       }
     } catch { /* silent */ }
     setSubLoading(false)
