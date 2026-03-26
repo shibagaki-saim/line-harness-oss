@@ -25,12 +25,8 @@ export class FriendsResource {
     return res.data
   }
 
-  async count(params?: { accountId?: string }): Promise<number> {
-    const accountId = params?.accountId ?? this.defaultAccountId
-    const path = accountId
-      ? `/api/friends/count?lineAccountId=${encodeURIComponent(accountId)}`
-      : '/api/friends/count'
-    const res = await this.http.get<ApiResponse<{ count: number }>>(path)
+  async count(): Promise<number> {
+    const res = await this.http.get<ApiResponse<{ count: number }>>('/api/friends/count')
     return res.data.count
   }
 
