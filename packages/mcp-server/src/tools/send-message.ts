@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { autoTrackUrls } from "./auto-track-urls.js";
 
 export function registerSendMessage(server: McpServer): void {
   server.tool(
@@ -23,9 +24,18 @@ export function registerSendMessage(server: McpServer): void {
     async ({ friendId, content, messageType }) => {
       try {
         const client = getClient();
+
+        // Auto-track URLs in flex messages
+        const { content: trackedContent } = await autoTrackUrls(
+          client,
+          content,
+          messageType,
+          `DM to ${friendId.slice(0, 8)}`,
+        );
+
         const result = await client.friends.sendMessage(
           friendId,
-          content,
+          trackedContent,
           messageType,
         );
         return {

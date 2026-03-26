@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { getClient } from "../client.js";
+import { autoTrackUrls } from "./auto-track-urls.js";
 
 export function registerBroadcast(server: McpServer): void {
   server.tool(
@@ -117,10 +118,17 @@ export function registerBroadcast(server: McpServer): void {
             };
           }
 
+          const { content: trackedContent } = await autoTrackUrls(
+            client,
+            messageContent,
+            messageType,
+            title,
+          );
+
           const broadcast = await client.broadcasts.create({
             title: `[SEGMENT] ${title}`,
             messageType,
-            messageContent,
+            messageContent: trackedContent,
             targetType: "all",
             lineAccountId: accountId,
           });
@@ -148,11 +156,19 @@ export function registerBroadcast(server: McpServer): void {
           }
         }
 
+        // Auto-track URLs in flex messages
+        const { content: trackedContent, trackedUrls } = await autoTrackUrls(
+          client,
+          messageContent,
+          messageType,
+          title,
+        );
+
         // At this point targetType is guaranteed to be 'all' or 'tag' (segment handled above)
         const broadcast = await client.broadcasts.create({
           title,
           messageType,
-          messageContent,
+          messageContent: trackedContent,
           targetType: targetType as "all" | "tag",
           targetTagId,
           scheduledAt,
