@@ -29,7 +29,6 @@ async function createTrackingMap(
   db: D1Database,
   urls: Set<string>,
   workerUrl: string,
-  liffUrl: string,
 ): Promise<Map<string, { trackingUrl: string; originalUrl: string; label: string }>> {
   const urlMap = new Map<string, { trackingUrl: string; originalUrl: string; label: string }>();
   for (const url of urls) {
@@ -37,9 +36,8 @@ async function createTrackingMap(
       name: `auto: ${url.slice(0, 60)}`,
       originalUrl: url,
     });
-    const directUrl = `${workerUrl}/t/${link.id}`;
-    const trackingUrl = `${liffUrl}?redirect=${encodeURIComponent(directUrl)}`;
-    // Generate a readable button label from the URL
+    // Use direct /t/ URL — Worker handles LINE app detection and LIFF redirect server-side
+    const trackingUrl = `${workerUrl}/t/${link.id}`;
     const hostname = new URL(url).hostname.replace('www.', '');
     const label = hostname.length > 20 ? hostname.slice(0, 20) + '…' : hostname;
     urlMap.set(url, { trackingUrl, originalUrl: url, label });
@@ -117,14 +115,13 @@ export async function autoTrackContent(
   messageType: string,
   content: string,
   workerUrl: string,
-  liffUrl: string,
 ): Promise<AutoTrackResult> {
   if (messageType === 'image') return { messageType, content };
 
   const urls = extractUrls(content);
   if (urls.size === 0) return { messageType, content };
 
-  const urlMap = await createTrackingMap(db, urls, workerUrl, liffUrl);
+  const urlMap = await createTrackingMap(db, urls, workerUrl);
 
   // Text messages → convert to Flex with buttons
   if (messageType === 'text') {

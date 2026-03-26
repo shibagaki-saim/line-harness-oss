@@ -320,7 +320,6 @@ friends.post('/api/friends/:id/messages', async (c) => {
     const tracked = await autoTrackContent(
       db, messageType, body.content,
       c.env.WORKER_URL || new URL(c.req.url).origin,
-      c.env.LIFF_URL,
     );
 
     const message = buildMessage(tracked.messageType, tracked.content);

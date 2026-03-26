@@ -70,7 +70,6 @@ export async function processStepDeliveries(
   db: D1Database,
   lineClient: LineClient,
   workerUrl?: string,
-  liffUrl?: string,
 ): Promise<void> {
   // Skip delivery outside 9:00-23:00 JST window
   const jstHour = new Date(Date.now() + 9 * 60 * 60_000).getUTCHours();
@@ -86,7 +85,7 @@ export async function processStepDeliveries(
       if (i > 0) {
         await sleep(addJitter(50, 200));
       }
-      await processSingleDelivery(db, lineClient, fs, workerUrl, liffUrl);
+      await processSingleDelivery(db, lineClient, fs, workerUrl);
     } catch (err) {
       console.error(`Error processing friend_scenario ${fs.id}:`, err);
       // Continue with next one
@@ -106,7 +105,6 @@ async function processSingleDelivery(
     next_delivery_at: string | null;
   },
   workerUrl?: string,
-  liffUrl?: string,
 ): Promise<void> {
   // Get friend first to read preferred delivery hour from metadata
   const friend = await getFriendById(db, fs.friend_id);
@@ -168,9 +166,9 @@ async function processSingleDelivery(
   // Auto-wrap URLs with tracking links (text with URLs → Flex with button)
   let trackedType: string = currentStep.message_type;
   let trackedContent = expandedContent;
-  if (workerUrl && liffUrl) {
+  if (workerUrl) {
     const { autoTrackContent } = await import('./auto-track.js');
-    const tracked = await autoTrackContent(db, currentStep.message_type, expandedContent, workerUrl, liffUrl);
+    const tracked = await autoTrackContent(db, currentStep.message_type, expandedContent, workerUrl);
     trackedType = tracked.messageType;
     trackedContent = tracked.content;
   }
