@@ -6,6 +6,7 @@ interface SecretsOptions {
   lineChannelAccessToken: string;
   lineChannelSecret: string;
   lineLoginChannelId: string;
+  liffId: string;
   apiKey: string;
 }
 
@@ -17,6 +18,7 @@ export async function setSecrets(options: SecretsOptions): Promise<void> {
     LINE_CHANNEL_ACCESS_TOKEN: options.lineChannelAccessToken,
     LINE_CHANNEL_SECRET: options.lineChannelSecret,
     LINE_LOGIN_CHANNEL_ID: options.lineLoginChannelId,
+    LIFF_URL: `https://liff.line.me/${options.liffId}`,
     API_KEY: options.apiKey,
   };
 

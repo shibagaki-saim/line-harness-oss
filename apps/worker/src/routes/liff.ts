@@ -451,24 +451,38 @@ liffRoutes.get('/auth/callback', async (c) => {
       return c.redirect(redirect);
     }
 
-    // If friend is not yet following this bot, redirect to friend-add page
+    // Redirect to the correct bot's chat after auth
+    // Find the LINE account by: account param, friend's account, or login channel ID
+    let redirectAccount: Record<string, string> | null = null;
     if (accountParam) {
-      const account = await getLineAccountByChannelId(db, accountParam);
-      if (account) {
-        // Fetch bot basic ID for friend-add URL
-        try {
-          const botInfo = await fetch('https://api.line.me/v2/bot/info', {
-            headers: { Authorization: `Bearer ${account.channel_access_token}` },
-          });
-          if (botInfo.ok) {
-            const bot = await botInfo.json() as { basicId?: string };
-            if (bot.basicId) {
-              return c.redirect(`https://line.me/R/ti/p/${bot.basicId}`);
-            }
+      redirectAccount = await getLineAccountByChannelId(db, accountParam) as Record<string, string> | null;
+    }
+    if (!redirectAccount) {
+      // Find account by login_channel_id used in this OAuth flow
+      redirectAccount = await db
+        .prepare('SELECT * FROM line_accounts WHERE login_channel_id = ?')
+        .bind(loginChannelId)
+        .first<Record<string, string>>();
+    }
+    if (!redirectAccount) {
+      // Fallback: first active account
+      redirectAccount = await db
+        .prepare('SELECT * FROM line_accounts WHERE is_active = 1 LIMIT 1')
+        .first<Record<string, string>>();
+    }
+    if (redirectAccount?.channel_access_token) {
+      try {
+        const botInfo = await fetch('https://api.line.me/v2/bot/info', {
+          headers: { Authorization: `Bearer ${redirectAccount.channel_access_token}` },
+        });
+        if (botInfo.ok) {
+          const bot = await botInfo.json() as { basicId?: string };
+          if (bot.basicId) {
+            return c.redirect(`https://line.me/R/ti/p/${bot.basicId}`);
           }
-        } catch {
-          // Fall through to completion page
         }
+      } catch {
+        // Fall through to completion page
       }
     }
 

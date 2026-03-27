@@ -1,17 +1,18 @@
 import { resolve } from "node:path";
 import { runSetup } from "./commands/setup.js";
 import { runUpdate } from "./commands/update.js";
+import { ensureRepo } from "./steps/clone-repo.js";
 
 const args = process.argv.slice(2);
 
-function parseArgs(): { command: string; repoDir: string } {
+function parseArgs(): { command: string; repoDir: string | null } {
   let command = "setup";
-  let repoDir = process.cwd();
+  let repoDir: string | null = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--repo-dir" && args[i + 1]) {
       repoDir = resolve(args[i + 1]);
-      i++; // skip next arg
+      i++;
     } else if (!args[i].startsWith("-")) {
       command = args[i];
     }
@@ -21,7 +22,10 @@ function parseArgs(): { command: string; repoDir: string } {
 }
 
 async function main(): Promise<void> {
-  const { command, repoDir } = parseArgs();
+  const { command, repoDir: explicitRepoDir } = parseArgs();
+
+  // Ensure repo is available (clone if needed)
+  const repoDir = await ensureRepo(explicitRepoDir);
 
   if (command === "setup") {
     await runSetup(repoDir);

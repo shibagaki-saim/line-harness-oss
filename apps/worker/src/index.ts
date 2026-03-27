@@ -94,7 +94,10 @@ app.route('/', staff);
 // Short link: /r/:ref → landing page with LINE open button
 app.get('/r/:ref', (c) => {
   const ref = c.req.param('ref');
-  const liffUrl = c.env.LIFF_URL || 'https://liff.line.me/2009554425-4IMBmLQ9';
+  const liffUrl = c.env.LIFF_URL;
+  if (!liffUrl) {
+    return c.json({ error: 'LIFF_URL is not configured. Set it via wrangler secret put LIFF_URL.' }, 500);
+  }
   const target = `${liffUrl}?ref=${encodeURIComponent(ref)}`;
 
   return c.html(`<!DOCTYPE html>

@@ -150,11 +150,12 @@ function showCompletion(profile: { displayName: string; pictureUrl?: string }, i
     </div>
   `;
 
-  // 2秒後にトーク画面に遷移
-  setTimeout(() => {
-    // LINE内でもブラウザでも、トーク画面URLに遷移
-    window.location.href = 'https://line.me/R/oaMessage/@086cdqiw/';
-  }, 2000);
+  // 2秒後にトーク画面に遷移（BOT_BASIC_ID が設定されている場合のみ）
+  if (BOT_BASIC_ID) {
+    setTimeout(() => {
+      window.location.href = `https://line.me/R/oaMessage/${BOT_BASIC_ID}/`;
+    }, 2000);
+  }
 }
 
 function showError(message: string) {

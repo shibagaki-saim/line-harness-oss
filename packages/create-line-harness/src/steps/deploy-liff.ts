@@ -8,6 +8,7 @@ interface DeployLiffOptions {
   repoDir: string;
   workerUrl: string;
   liffId: string;
+  botBasicId: string;
   projectName: string;
 }
 
@@ -23,7 +24,7 @@ export async function deployLiff(
 
   // Write .env.production
   s.start("LIFF ビルド中...");
-  const envContent = `VITE_API_URL=${options.workerUrl}\nVITE_LIFF_ID=${options.liffId}\n`;
+  const envContent = `VITE_API_URL=${options.workerUrl}\nVITE_LIFF_ID=${options.liffId}\nVITE_BOT_BASIC_ID=${options.botBasicId}\n`;
   writeFileSync(join(liffDir, ".env.production"), envContent);
 
   // Build Vite app

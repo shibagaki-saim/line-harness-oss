@@ -1,6 +1,7 @@
 import * as p from "@clack/prompts";
 
 interface LineCredentials {
+  lineChannelId: string;
   lineChannelAccessToken: string;
   lineChannelSecret: string;
   lineLoginChannelId: string;
@@ -29,6 +30,20 @@ export async function promptLineCredentials(): Promise<LineCredentials> {
       "  https://manager.line.biz/ → アカウント選択 → 設定 → Messaging API",
     ].join("\n"),
   );
+
+  const lineChannelId = await p.text({
+    message: "Channel ID（数字）",
+    placeholder: "同じページに表示されている Channel ID",
+    validate(value) {
+      if (!value || !/^\d+$/.test(value.trim())) {
+        return "Channel ID は数字で入力してください";
+      }
+    },
+  });
+  if (p.isCancel(lineChannelId)) {
+    p.cancel("セットアップをキャンセルしました");
+    process.exit(0);
+  }
 
   const lineChannelAccessToken = await p.text({
     message: "チャネルアクセストークン（長期）",
@@ -83,6 +98,7 @@ export async function promptLineCredentials(): Promise<LineCredentials> {
   }
 
   return {
+    lineChannelId: (lineChannelId as string).trim(),
     lineChannelAccessToken: (lineChannelAccessToken as string).trim(),
     lineChannelSecret: (lineChannelSecret as string).trim(),
     lineLoginChannelId: (lineLoginChannelId as string).trim(),

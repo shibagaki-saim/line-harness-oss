@@ -12,8 +12,10 @@ import { deployLiff } from "../steps/deploy-liff.js";
 import { setSecrets } from "../steps/secrets.js";
 import { generateMcpConfig } from "../steps/mcp-config.js";
 import { generateApiKey } from "../lib/crypto.js";
+import { wrangler } from "../lib/wrangler.js";
 
 interface SetupState {
+  lineChannelId?: string;
   lineChannelAccessToken?: string;
   lineChannelSecret?: string;
   lineLoginChannelId?: string;
@@ -23,6 +25,7 @@ interface SetupState {
   d1DatabaseName?: string;
   workerName?: string;
   accountId?: string;
+  botBasicId?: string;
   workerUrl?: string;
   adminUrl?: string;
   liffUrl?: string;
@@ -87,6 +90,7 @@ export async function runSetup(repoDir: string): Promise<void> {
   // Step 3: Get LINE credentials (skip if already saved)
   if (!isDone(state, "credentials")) {
     const credentials = await promptLineCredentials();
+    state.lineChannelId = credentials.lineChannelId;
     state.lineChannelAccessToken = credentials.lineChannelAccessToken;
     state.lineChannelSecret = credentials.lineChannelSecret;
     state.lineLoginChannelId = credentials.lineLoginChannelId;
@@ -103,8 +107,9 @@ export async function runSetup(repoDir: string): Promise<void> {
         "── LIFF アプリ（LINE Login チャネル内） ──",
         "",
         "LINE Login チャネルの設定:",
+        "  リンクされたボット: Messaging API のボットを選択",
         "  Scope: openid, profile, chat_message.write を有効化",
-        "  友だち追加オプション: On (normal)",
+        "  友だち追加オプション: On (aggressive)",
         "",
         "LIFF アプリの作成:",
         "  1. LINE Login チャネル → LIFF タブ → 追加",
@@ -120,8 +125,8 @@ export async function runSetup(repoDir: string): Promise<void> {
       message: "LIFF ID",
       placeholder: "チャネルID-ランダム文字列（例: 2009554425-4IMBmLQ9）",
       validate(value) {
-        if (!value || value.trim().length < 5) {
-          return "LIFF ID を入力してください";
+        if (!value || !value.includes("-")) {
+          return "LIFF ID は「チャネルID-ランダム文字列」の形式です（例: 2009554425-4IMBmLQ9）";
         }
       },
     });
@@ -178,6 +183,7 @@ export async function runSetup(repoDir: string): Promise<void> {
       lineChannelAccessToken: state.lineChannelAccessToken!,
       lineChannelSecret: state.lineChannelSecret!,
       lineLoginChannelId: state.lineLoginChannelId!,
+      liffId: state.liffId!,
       apiKey: state.apiKey!,
     });
     markDone(state, "secrets");
@@ -199,12 +205,40 @@ export async function runSetup(repoDir: string): Promise<void> {
         },
         body: JSON.stringify({
           name: "LINE Harness",
-          channelId: state.lineLoginChannelId,
+          channelId: state.lineChannelId,
           channelAccessToken: state.lineChannelAccessToken,
           channelSecret: state.lineChannelSecret,
         }),
       });
       if (res.ok) {
+        // Set login_channel_id (not supported by API, update DB directly)
+        try {
+          await wrangler([
+            "d1",
+            "execute",
+            "line-harness",
+            "--remote",
+            "--command",
+            `UPDATE line_accounts SET login_channel_id = '${state.lineLoginChannelId}' WHERE channel_id = '${state.lineChannelId}'`,
+          ]);
+        } catch {
+          // Non-critical
+        }
+        // Fetch bot basic ID for LIFF friend-add button
+        try {
+          const botRes = await fetch("https://api.line.me/v2/bot/info", {
+            headers: { Authorization: `Bearer ${state.lineChannelAccessToken}` },
+          });
+          if (botRes.ok) {
+            const bot = (await botRes.json()) as { basicId?: string };
+            if (bot.basicId) {
+              state.botBasicId = bot.basicId;
+              saveState(repoDir, state);
+            }
+          }
+        } catch {
+          // Non-critical
+        }
         s.stop("LINE アカウント登録完了");
       } else {
         const data = (await res.json()) as Record<string, unknown>;
@@ -244,6 +278,7 @@ export async function runSetup(repoDir: string): Promise<void> {
       repoDir,
       workerUrl: state.workerUrl!,
       liffId: state.liffId!,
+      botBasicId: state.botBasicId || "",
       projectName: liffProjectName,
     });
     state.liffUrl = liffUrl;
