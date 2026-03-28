@@ -32,8 +32,19 @@ export function generateMcpConfig(options: McpConfigOptions): void {
   if (!mcpConfig.mcpServers) {
     mcpConfig.mcpServers = {};
   }
-  mcpConfig.mcpServers["line-harness"] = newServerConfig;
+
+  // Don't overwrite existing line-harness config — use a unique name
+  let serverName = "line-harness";
+  if (mcpConfig.mcpServers["line-harness"]) {
+    // Extract a short suffix from the API key
+    const suffix = options.apiKey.slice(0, 8);
+    serverName = `line-harness-${suffix}`;
+    p.log.info(
+      `既存の line-harness 設定があるため、${serverName} として追加します`,
+    );
+  }
+  mcpConfig.mcpServers[serverName] = newServerConfig;
 
   writeFileSync(mcpJsonPath, JSON.stringify(mcpConfig, null, 2) + "\n");
-  p.log.success(".mcp.json に MCP 設定を追加しました");
+  p.log.success(`.mcp.json に MCP 設定を追加しました（${serverName}）`);
 }
