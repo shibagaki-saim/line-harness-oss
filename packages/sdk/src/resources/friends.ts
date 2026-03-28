@@ -12,6 +12,7 @@ export class FriendsResource {
     if (params?.limit !== undefined) query.set('limit', String(params.limit))
     if (params?.offset !== undefined) query.set('offset', String(params.offset))
     if (params?.tagId) query.set('tagId', params.tagId)
+    if (params?.search) query.set('search', params.search)
     const accountId = params?.accountId ?? this.defaultAccountId
     if (accountId) query.set('lineAccountId', accountId)
     const qs = query.toString()

@@ -45,6 +45,7 @@ export interface FriendListParams {
   limit?: number
   offset?: number
   tagId?: string
+  search?: string
   accountId?: string
 }
 

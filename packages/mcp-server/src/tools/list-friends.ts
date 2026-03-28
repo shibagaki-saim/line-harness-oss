@@ -5,8 +5,9 @@ import { getClient } from "../client.js";
 export function registerListFriends(server: McpServer): void {
   server.tool(
     "list_friends",
-    "List friends with optional filtering by tag. Returns paginated results with friend details.",
+    "List friends with optional filtering by tag or name search. Returns paginated results with friend details.",
     {
+      search: z.string().optional().describe("Search friends by display name (partial match)"),
       tagId: z.string().optional().describe("Filter by tag ID"),
       limit: z
         .number()
@@ -18,10 +19,11 @@ export function registerListFriends(server: McpServer): void {
         .optional()
         .describe("LINE account ID (uses default if omitted)"),
     },
-    async ({ tagId, limit, offset, accountId }) => {
+    async ({ search, tagId, limit, offset, accountId }) => {
       try {
         const client = getClient();
         const result = await client.friends.list({
+          search,
           tagId,
           limit,
           offset,

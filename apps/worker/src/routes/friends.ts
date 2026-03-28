@@ -51,6 +51,7 @@ friends.get('/api/friends', async (c) => {
     const offset = Number(c.req.query('offset') ?? '0');
     const tagId = c.req.query('tagId');
     const lineAccountId = c.req.query('lineAccountId');
+    const search = c.req.query('search');
 
     const db = c.env.DB;
 
@@ -64,6 +65,10 @@ friends.get('/api/friends', async (c) => {
     if (lineAccountId) {
       conditions.push('f.line_account_id = ?');
       binds.push(lineAccountId);
+    }
+    if (search) {
+      conditions.push('f.display_name LIKE ?');
+      binds.push(`%${search}%`);
     }
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
