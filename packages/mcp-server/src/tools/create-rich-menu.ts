@@ -5,7 +5,7 @@ import { getClient } from "../client.js";
 export function registerCreateRichMenu(server: McpServer): void {
   server.tool(
     "create_rich_menu",
-    "Create a LINE rich menu (the persistent menu at the bottom of the chat). Image must be uploaded separately via LINE Developers Console. This creates the menu structure and button areas.",
+    "Create a LINE rich menu with optional image upload. Provide imageData (base64) to attach the menu image in one step.",
     {
       name: z.string().describe("Rich menu name"),
       chatBarText: z
@@ -34,12 +34,20 @@ export function registerCreateRichMenu(server: McpServer): void {
         .describe(
           "JSON string of menu button areas. Format: [{ bounds: { x, y, width, height }, action: { type: 'uri'|'message'|'postback', uri?, text?, data? } }]",
         ),
+      imageData: z
+        .string()
+        .optional()
+        .describe("Base64-encoded image data for the rich menu (PNG or JPEG, 2500x1686 or 2500x843)"),
+      imageContentType: z
+        .enum(["image/png", "image/jpeg"])
+        .default("image/jpeg")
+        .describe("Image MIME type"),
       setAsDefault: z
         .boolean()
         .default(false)
         .describe("Set this as the default rich menu for all friends"),
     },
-    async ({ name, chatBarText, size, selected, areas, setAsDefault }) => {
+    async ({ name, chatBarText, size, selected, areas, imageData, imageContentType, setAsDefault }) => {
       try {
         const client = getClient();
         const menu = await client.richMenus.create({
@@ -49,6 +57,10 @@ export function registerCreateRichMenu(server: McpServer): void {
           selected,
           areas: JSON.parse(areas),
         });
+
+        if (imageData) {
+          await client.richMenus.uploadImage(menu.richMenuId, imageData, imageContentType);
+        }
 
         if (setAsDefault) {
           await client.richMenus.setDefault(menu.richMenuId);
@@ -62,6 +74,7 @@ export function registerCreateRichMenu(server: McpServer): void {
                 {
                   success: true,
                   richMenuId: menu.richMenuId,
+                  imageUploaded: !!imageData,
                   isDefault: setAsDefault,
                 },
                 null,
