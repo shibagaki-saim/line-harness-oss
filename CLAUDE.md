@@ -53,7 +53,7 @@
 
 ### 本番環境
 
-- **CF アカウント**: aiagent.mini@gmail.com (ID: `37f8f88be4c099329e4647bda211bb9f`)
+- **CF アカウント**: your-email@example.com (ID: `YOUR_ACCOUNT_ID`)
 - **Worker名**: `line-crm-worker`（wrangler.toml の `name` とは異なる）
 - **D1**: `line-crm` (ID: `YOUR_D1_DATABASE_ID`)
 - **デプロイ元**: Mac Mini SSH
@@ -66,9 +66,9 @@ ssh macmini 'export PATH="$HOME/.local/share/fnm/aliases/default/bin:$PATH" && c
 
 # wrangler.toml を本番用に変更してデプロイ
 ssh macmini '... && cd apps/worker && \
-  sed -i "" "s/account_id = \"c40947ff58a767be74a53be79a89d68a\"/account_id = \"37f8f88be4c099329e4647bda211bb9f\"/" wrangler.toml && \
+  sed -i "" "s/account_id = \"YOUR_DEV_ACCOUNT_ID\"/account_id = \"YOUR_ACCOUNT_ID\"/" wrangler.toml && \
   sed -i "" "s/database_name = \"line-harness\"/database_name = \"line-crm\"/" wrangler.toml && \
-  sed -i "" "s/database_id = \"7efe7c20-01ae-4d65-be08-0d7b4202e8a1\"/database_id = \"YOUR_D1_DATABASE_ID\"/" wrangler.toml && \
+  sed -i "" "s/database_id = \"YOUR_DEV_D1_DATABASE_ID\"/database_id = \"YOUR_D1_DATABASE_ID\"/" wrangler.toml && \
   npx wrangler deploy --name line-crm-worker'
 
 # wrangler.toml を元に戻す
