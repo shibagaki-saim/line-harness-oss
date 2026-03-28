@@ -2,12 +2,12 @@ name = "line-harness"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 workers_dev = true
-account_id = "c40947ff58a767be74a53be79a89d68a"
+account_id = "YOUR_DEV_ACCOUNT_ID"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "line-harness"
-database_id = "7efe7c20-01ae-4d65-be08-0d7b4202e8a1"
+database_id = "YOUR_DEV_D1_DATABASE_ID"
 
 [[r2_buckets]]
 binding = "IMAGES"

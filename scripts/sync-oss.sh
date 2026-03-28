@@ -39,6 +39,10 @@ find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.md" -o -name "*.toml
   -exec sed -i '' \
     -e 's|YOUR_D1_DATABASE_ID|YOUR_D1_DATABASE_ID|g' \
     -e 's|YOUR_D1_DATABASE_ID"]*"|YOUR_D1_DATABASE_ID"|g' \
+    -e 's|YOUR_ACCOUNT_ID|YOUR_ACCOUNT_ID|g' \
+    -e 's|YOUR_DEV_ACCOUNT_ID|YOUR_DEV_ACCOUNT_ID|g' \
+    -e 's|YOUR_DEV_D1_DATABASE_ID|YOUR_DEV_D1_DATABASE_ID|g' \
+    -e 's|aiagent\.mini@gmail\.com|your-email@example.com|g' \
     {} +
 
 # Verify no secrets
