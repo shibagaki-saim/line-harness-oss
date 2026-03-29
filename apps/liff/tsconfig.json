@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "jsx": "preserve"
   },
-  "include": ["src/client"]
+  "include": ["src"]
 }

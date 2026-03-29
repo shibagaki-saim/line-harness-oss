@@ -168,34 +168,27 @@ export async function getAffiliateReport(
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-  // Build date conditions for subqueries using parameterized queries
+  // Validate date strings to prevent SQL injection (ISO 8601 format only)
+  const safeDate = (d: string): string => {
+    if (!/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/.test(d)) {
+      throw new Error(`Invalid date format: ${d}`);
+    }
+    return d;
+  };
+
+  // Build date conditions for subqueries with validated dates
   let clickDateCond = '';
   let cvDateCond = '';
-  const clickDateBinds: unknown[] = [];
-  const cvDateBinds: unknown[] = [];
   if (opts.startDate) {
-    clickDateCond += ` AND ac.created_at >= ?`;
-    cvDateCond += ` AND ce.created_at >= ?`;
-    clickDateBinds.push(opts.startDate);
-    cvDateBinds.push(opts.startDate);
+    const sd = safeDate(opts.startDate);
+    clickDateCond += ` AND ac.created_at >= '${sd}'`;
+    cvDateCond += ` AND ce.created_at >= '${sd}'`;
   }
   if (opts.endDate) {
-    clickDateCond += ` AND ac.created_at <= ?`;
-    cvDateCond += ` AND ce.created_at <= ?`;
-    clickDateBinds.push(opts.endDate);
-    cvDateBinds.push(opts.endDate);
+    const ed = safeDate(opts.endDate);
+    clickDateCond += ` AND ac.created_at <= '${ed}'`;
+    cvDateCond += ` AND ce.created_at <= '${ed}'`;
   }
-
-  // D1 bind order must match the ? placeholders left-to-right in the SQL.
-  // The subqueries each reference their own set of date params, so we must
-  // supply them for each subquery occurrence (clicks, conversions, revenue).
-  const dateBindsForRevenue = [...cvDateBinds]; // revenue subquery reuses cv date conditions
-  const allBinds = [
-    ...clickDateBinds,   // for total_clicks subquery
-    ...cvDateBinds,      // for total_conversions subquery
-    ...dateBindsForRevenue, // for total_revenue subquery
-    ...values,           // for the outer WHERE clause
-  ];
 
   const result = await db
     .prepare(
@@ -213,7 +206,7 @@ export async function getAffiliateReport(
        ${where}
        ORDER BY total_conversions DESC`,
     )
-    .bind(...allBinds)
+    .bind(...values)
     .all<{
       affiliate_id: string;
       affiliate_name: string;

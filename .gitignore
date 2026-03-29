@@ -12,4 +12,3 @@ dist/
 .env.production
 .env.staging
 apps/web/out/
-apps/worker/dist/

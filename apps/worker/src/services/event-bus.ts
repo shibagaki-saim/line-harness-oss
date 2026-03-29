@@ -21,6 +21,7 @@ import {
   removeTagFromFriend,
   enrollFriendInScenario,
   jstNow,
+  getFriendScore,
 } from '@line-crm/db';
 import { LineClient } from '@line-crm/line-sdk';
 import { sendAdConversions } from './ad-conversion.js';
@@ -33,7 +34,13 @@ export interface EventPayload {
 }
 
 /**
- * イベントを発火し、登録された全ハンドラーを実行
+ * Fire an event and run all registered handlers.
+ *
+ * Execution is split into two sequential phases so that score_threshold
+ * conditions in automation rules see the score already updated by this event:
+ *
+ *   Phase 1 (concurrent): outgoing webhooks + scoring
+ *   Phase 2 (concurrent): automations + notifications, with currentScore injected
  */
 export async function fireEvent(
   db: D1Database,
@@ -42,21 +49,34 @@ export async function fireEvent(
   lineAccessToken?: string,
   lineAccountId?: string | null,
 ): Promise<void> {
-  const jobs: Promise<unknown>[] = [
+  // Phase 1: fire webhooks, apply scoring rules, and ad conversion postback concurrently.
+  const phase1: Promise<unknown>[] = [
     fireOutgoingWebhooks(db, eventType, payload),
     processScoring(db, eventType, payload),
-    processAutomations(db, eventType, payload, lineAccessToken, lineAccountId),
-    processNotifications(db, eventType, payload, lineAccountId),
   ];
-
-  // Ad conversion postback
   if (payload.friendId && payload.conversionEventName) {
-    jobs.push(
+    phase1.push(
       sendAdConversions(db, payload.friendId, payload.conversionEventName, payload.conversionValue),
     );
   }
+  await Promise.allSettled(phase1);
 
-  await Promise.allSettled(jobs);
+  // Build an enriched payload with the freshly-updated score.
+  const enrichedPayload: EventPayload = payload.friendId
+    ? {
+        ...payload,
+        eventData: {
+          ...payload.eventData,
+          currentScore: await getFriendScore(db, payload.friendId),
+        },
+      }
+    : payload;
+
+  // Phase 2: evaluate automations and create notifications concurrently.
+  await Promise.allSettled([
+    processAutomations(db, eventType, enrichedPayload, lineAccessToken, lineAccountId),
+    processNotifications(db, eventType, enrichedPayload, lineAccountId),
+  ]);
 }
 
 /** 送信Webhookへの通知 */
