@@ -502,4 +502,78 @@ export const api = {
     regenerateKey: (id: string) =>
       fetchApi<ApiResponse<{ apiKey: string }>>(`/api/staff/${id}/regenerate-key`, { method: 'POST' }),
   },
+  ai: {
+    providers: {
+      list: () => fetchApi<{ success: boolean; data: AiProvider[] }>('/api/ai/providers'),
+      create: (data: { name: string; provider: string; model: string; api_key?: string; base_url?: string }) =>
+        fetchApi<{ success: boolean; data: AiProvider }>('/api/ai/providers', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: { name?: string; model?: string; api_key?: string; base_url?: string; is_active?: number }) =>
+        fetchApi<{ success: boolean }>(`/api/ai/providers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (id: string) =>
+        fetchApi<{ success: boolean }>(`/api/ai/providers/${id}`, { method: 'DELETE' }),
+    },
+    personas: {
+      list: () => fetchApi<{ success: boolean; data: AiPersona[] }>('/api/ai/personas'),
+      create: (data: { name: string; provider_id: string; system_prompt: string; temperature?: number; max_tokens?: number }) =>
+        fetchApi<{ success: boolean; data: AiPersona }>('/api/ai/personas', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: { name?: string; system_prompt?: string; temperature?: number; max_tokens?: number; is_active?: number }) =>
+        fetchApi<{ success: boolean }>(`/api/ai/personas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    },
+    conversations: {
+      list: (params?: { limit?: number; offset?: number }) => {
+        const q = params ? '?' + new URLSearchParams(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))) : ''
+        return fetchApi<{ success: boolean; data: { items: AiConversation[]; total: number } }>(`/api/ai/conversations${q}`)
+      },
+    },
+    knowledge: {
+      list: () => fetchApi<{ success: boolean; data: KnowledgeDoc[] }>('/api/ai/knowledge'),
+      create: (data: { title: string; content: string; source_type?: string }) =>
+        fetchApi<{ success: boolean; data: KnowledgeDoc }>('/api/ai/knowledge', { method: 'POST', body: JSON.stringify(data) }),
+    },
+    handover: {
+      list: () => fetchApi<{ success: boolean; data: HandoverRequest[] }>('/api/ai/handover'),
+      claim: (id: string) =>
+        fetchApi<{ success: boolean }>(`/api/ai/handover/${id}/claim`, { method: 'POST' }),
+      resolve: (id: string) =>
+        fetchApi<{ success: boolean }>(`/api/ai/handover/${id}/resolve`, { method: 'POST' }),
+    },
+    proactive: {
+      list: () => fetchApi<{ success: boolean; data: AiProactiveConfig[] }>('/api/ai/proactive'),
+      create: (data: { persona_id: string; trigger_type: string; trigger_value: string; message_template: string }) =>
+        fetchApi<{ success: boolean; data: AiProactiveConfig }>('/api/ai/proactive', { method: 'POST', body: JSON.stringify(data) }),
+    },
+  },
+}
+
+// ─── AI types ───────────────────────────────────────────────────────────────
+
+export type AiProvider = {
+  id: string; name: string; provider: string; model: string;
+  api_key_enc: string | null; base_url: string | null; is_active: number;
+  created_at: string; updated_at: string;
+}
+export type AiPersona = {
+  id: string; name: string; provider_id: string; system_prompt: string;
+  temperature: number; max_tokens: number; is_active: number;
+  created_at: string; updated_at: string;
+}
+export type AiConversation = {
+  id: string; friend_id: string; persona_id: string;
+  user_message: string; ai_response: string | null; model: string;
+  input_tokens: number | null; output_tokens: number | null;
+  latency_ms: number | null; status: string; created_at: string;
+  friend_name?: string;
+}
+export type KnowledgeDoc = {
+  id: string; title: string; content: string; source_type: string;
+  chunk_count: number; is_indexed: number; created_at: string; updated_at: string;
+}
+export type HandoverRequest = {
+  id: string; friend_id: string; reason: string | null;
+  status: string; claimed_by: string | null; created_at: string; updated_at: string;
+  friend_name?: string;
+}
+export type AiProactiveConfig = {
+  id: string; persona_id: string; trigger_type: string; trigger_value: string;
+  message_template: string; is_active: number; created_at: string; updated_at: string;
 }

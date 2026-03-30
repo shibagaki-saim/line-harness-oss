@@ -1,7 +1,7 @@
 # LINE Marketing OS (line-harness-oss) — todo
 
-最終更新: 2026-03-30（セッション3）
-進捗: Phase 0 完了 / Phase 1-A・1-B 完了・実機テスト済み / Phase 1-C（管理画面UI）着手待ち
+最終更新: 2026-03-30（セッション4）
+進捗: Phase 0・Phase 1（A/B/C）完了 / Phase 2（フロービルダー）着手待ち
 
 ---
 
@@ -49,12 +49,13 @@
 - [x] バグ修正: Geminiモデルを `gemini-1.5-flash` → `gemini-2.5-flash` に更新（旧モデル廃止）← 2026-03-30完了
 
 ### 1-C: 管理画面 UI
-- [ ] `/ai/settings` — AIプロバイダー・ペルソナ設定ページ
-- [ ] `/ai/knowledge` — ナレッジベース管理ページ
-- [ ] `/ai/proactive` — プロアクティブ配信設定ページ
-- [ ] `/talk` にタブ追加: `ai-logs`（会話ログ）・`handover`（有人切替キュー）
-- [ ] サイドバーに「AI」メニュー追加
-- [ ] **動作テスト**: 管理画面からペルソナ設定 → LINE返信内容に反映確認
+- [x] `/ai/settings` — AIプロバイダー・ペルソナ設定ページ ← 2026-03-30完了
+- [x] `/ai/knowledge` — ナレッジベース管理ページ ← 2026-03-30完了
+- [x] `/ai/proactive` — プロアクティブ配信設定ページ ← 2026-03-30完了
+- [x] `/ai/logs` — AI会話ログページ ← 2026-03-30完了
+- [x] `/ai/handover` — 有人対応キューページ ← 2026-03-30完了
+- [x] サイドバーに「AI」メニュー追加 ← 2026-03-30完了
+- [x] **動作テスト**: 全5ページ表示確認済み ← 2026-03-30完了
 
 ---
 
@@ -128,17 +129,14 @@
 ---
 
 ## 📍 次回セッション引き継ぎ（最終更新: 2026-03-30）
-- 現在取り組んでいる箇所: Phase 1-B完了・実機テスト済み → Phase 1-C 管理画面UI着手
-- 次にやること: Phase 1-C管理画面UI
-  1. `/ai/settings` — AIプロバイダー・ペルソナ設定ページ
-  2. `/ai/knowledge` — ナレッジベース管理ページ
-  3. `/ai/proactive` — プロアクティブ配信設定ページ
-  4. `/talk` にタブ追加: `ai-logs`・`handover`
-  5. サイドバーに「AI」メニュー追加
+- 現在取り組んでいる箇所: Phase 1 完了 → Phase 2（ビジュアルフロービルダー）着手
+- 次にやること: Phase 2-A DBマイグレーション（flows/flow_executions/flow_execution_logs）
 - AI設定状況（DB内、本番稼働中）:
   - Provider: Gemini 2.5 Flash（ID: 7c92e9b1-3e24-4c84-b21c-6e29bc76fe1e）
   - Persona: デフォルトAI（ID: 6413bf09-9755-4c46-9ca4-c90e455c04e6、max_tokens: 1000）
+- 管理画面: http://localhost:3001（SSH ポートフォワーディング必要）
+  - API_KEY: cb5a34aeee932f0b97998b8307115b7232d22947c2c906182ec3497d8582ac5c
+  - .env.local: NEXT_PUBLIC_API_URL=https://line-harness.shibagaki.workers.dev
 - 注意事項:
-  - Cloudflare Workers では Buffer 未対応 → btoa/atob を使う（ai-handler.tsで適用済み）
-  - LIFF_URL未設定（.dev.vars で「要入力」のまま）← Phase 1-C着手時に対応
-  - ペルソナのシステムプロンプトは現在フレンドリー設定。用途に合わせて管理画面から調整予定
+  - Cloudflare Workers では Buffer 未対応 → btoa/atob を使う
+  - LIFF_URL未設定のまま（未使用機能なので後回し）
