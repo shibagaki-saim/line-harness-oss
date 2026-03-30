@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { verifySignature, LineClient } from '@line-crm/line-sdk';
 import type { WebhookRequestBody, WebhookEvent, TextEventMessage } from '@line-crm/line-sdk';
+import { getActiveAiPersona } from '@line-crm/db';
+import type { AiQueueMessage } from '../queues/ai-handler.js';
 import {
   upsertFriend,
   updateFriendFollowStatus,
@@ -66,7 +68,7 @@ webhook.post('/webhook', async (c) => {
   const processingPromise = (async () => {
     for (const event of body.events) {
       try {
-        await handleEvent(db, lineClient, event, channelAccessToken, matchedAccountId, c.env.WORKER_URL || new URL(c.req.url).origin);
+        await handleEvent(db, lineClient, event, channelAccessToken, matchedAccountId, c.env.WORKER_URL || new URL(c.req.url).origin, c.env.QUEUE_AI);
       } catch (err) {
         console.error('Error handling webhook event:', err);
       }
@@ -85,6 +87,7 @@ async function handleEvent(
   lineAccessToken: string,
   lineAccountId: string | null = null,
   workerUrl?: string,
+  queueAi?: Queue,
 ): Promise<void> {
   if (event.type === 'follow') {
     const userId =
@@ -282,7 +285,7 @@ async function handleEvent(
               footer: { type: 'box', layout: 'vertical', paddingAll: '16px',
                 contents: [
                   { type: 'button', action: { type: 'message', label: '導入について相談する', text: '導入支援を希望します' }, style: 'primary', color: '#06C755' },
-                  ...(c.env.LIFF_URL ? [{ type: 'button', action: { type: 'uri', label: 'フィードバックを送る', uri: `${c.env.LIFF_URL}?page=form` }, style: 'secondary', margin: 'sm' }] : []),
+                  ...(workerUrl ? [{ type: 'button', action: { type: 'uri', label: 'フィードバックを送る', uri: `${workerUrl}?page=form` }, style: 'secondary', margin: 'sm' }] : []),
                 ],
               },
             }))]);
@@ -352,6 +355,23 @@ async function handleEvent(
 
         matched = true;
         break;
+      }
+    }
+
+    // 自動返信にマッチしなかった場合: AIキューへ投入（2秒制限を超えないよう非同期）
+    if (!matched && queueAi) {
+      const persona = await getActiveAiPersona(db);
+      if (persona) {
+        const payload: AiQueueMessage = {
+          type: 'chat',
+          friendId: friend.id,
+          lineUserId: userId,
+          userMessage: incomingText,
+          personaId: persona.id,
+          channelAccessToken: lineAccessToken,
+          replyToken: event.replyToken,
+        };
+        await queueAi.send(payload);
       }
     }
 

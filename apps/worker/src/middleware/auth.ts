@@ -7,6 +7,7 @@ export async function authMiddleware(c: Context<Env>, next: Next): Promise<Respo
   // Skip auth for OpenAPI docs — public documentation
   const path = new URL(c.req.url).pathname;
   if (
+    path === '/health' ||
     path === '/webhook' ||
     path === '/docs' ||
     path === '/openapi.json' ||
