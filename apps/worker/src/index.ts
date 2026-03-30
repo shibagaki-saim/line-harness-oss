@@ -37,6 +37,8 @@ import { forms } from './routes/forms.js';
 import { adPlatforms } from './routes/ad-platforms.js';
 import { staff } from './routes/staff.js';
 import { images } from './routes/images.js';
+import { ai } from './routes/ai.js';
+import { handleAiQueue } from './queues/ai-handler.js';
 
 export type Env = {
   Bindings: {
@@ -50,7 +52,15 @@ export type Env = {
     LINE_LOGIN_CHANNEL_ID: string;
     LINE_LOGIN_CHANNEL_SECRET: string;
     WORKER_URL: string;
-    X_HARNESS_URL?: string;  // Optional: X Harness API URL for account linking
+    X_HARNESS_URL?: string;
+    // Phase 1: AI
+    ENCRYPTION_KEY: string;
+    VECTORIZE: VectorizeIndex;
+    QUEUE_AI: Queue;
+    QUEUE_MESSAGES: Queue;
+    QUEUE_FLOWS: Queue;
+    KV_SESSIONS: KVNamespace;
+    KV_RATE_LIMIT: KVNamespace;
   };
   Variables: {
     staff: { id: string; name: string; role: 'owner' | 'admin' | 'staff' };
@@ -67,6 +77,9 @@ app.use('*', rateLimitMiddleware);
 
 // Auth middleware — skips /webhook and /docs automatically
 app.use('*', authMiddleware);
+
+// Health check (public)
+app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
 // Mount route groups — MVP & Round 2
 app.route('/', webhook);
@@ -98,6 +111,7 @@ app.route('/', forms);
 app.route('/', adPlatforms);
 app.route('/', staff);
 app.route('/', images);
+app.route('/', ai);
 
 // Short link: /r/:ref → landing page with LINE open button
 app.get('/r/:ref', (c) => {
@@ -187,4 +201,9 @@ async function scheduled(
 export default {
   fetch: app.fetch,
   scheduled,
+  async queue(batch: MessageBatch, env: Env['Bindings']): Promise<void> {
+    if (batch.queue === 'lmo-ai-processing') {
+      await handleAiQueue(batch, env);
+    }
+  },
 };

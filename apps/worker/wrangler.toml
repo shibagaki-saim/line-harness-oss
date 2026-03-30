@@ -2,21 +2,61 @@ name = "line-harness"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 workers_dev = true
-account_id = "YOUR_DEV_ACCOUNT_ID"
+account_id = "3d6cad3c48c78a4623922e90c2d41801"
 
-# Static assets (LIFF pages) served by Workers Assets
-# SPA fallback ensures all non-API paths serve index.html
-[assets]
-not_found_handling = "single-page-application"
+# Static assets（本番デプロイ時に apps/worker/dist を指定する）
+# [assets]
+# directory = "./dist"
+# not_found_handling = "single-page-application"
 
+# ── D1 Database ────────────────────────────────────────────
 [[d1_databases]]
 binding = "DB"
-database_name = "line-harness"
-database_id = "YOUR_DEV_D1_DATABASE_ID"
+database_name = "lmo-meta"
+database_id = "1dbc9fc2-b451-4f33-87e1-00136a736fd4"
 
+# ── KV Namespaces ──────────────────────────────────────────
+[[kv_namespaces]]
+binding = "KV_SESSIONS"
+id = "ac0504c85cb14b78b1b590d97cd40ebd"
+
+[[kv_namespaces]]
+binding = "KV_RATE_LIMIT"
+id = "1894f27b62204a9d9f274f6abe96ef98"
+
+# ── R2 Bucket ──────────────────────────────────────────────
 [[r2_buckets]]
 binding = "IMAGES"
-bucket_name = "line-harness-images"
+bucket_name = "lmo-storage"
 
+# ── Vectorize (RAG) ────────────────────────────────────────
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "lmo-knowledge"
+
+# ── Queues ─────────────────────────────────────────────────
+[[queues.producers]]
+binding = "QUEUE_AI"
+queue = "lmo-ai-processing"
+
+[[queues.producers]]
+binding = "QUEUE_MESSAGES"
+queue = "lmo-message-delivery"
+
+[[queues.producers]]
+binding = "QUEUE_FLOWS"
+queue = "lmo-flow-execution"
+
+# Queue consumers
+[[queues.consumers]]
+queue = "lmo-ai-processing"
+max_batch_size = 10
+max_batch_timeout = 5
+
+# ── Cron Triggers ──────────────────────────────────────────
 [triggers]
-crons = ["*/5 * * * *"]
+crons = [
+  "*/5 * * * *",  # BAN検知・フロー遅延実行
+  "0 3 * * *",    # 報酬自動集計 (JST 12:00)
+  "0 0 * * *",    # プロアクティブAI配信チェック
+]
