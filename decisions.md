@@ -27,6 +27,24 @@
 
 ---
 
+## 2026-03-31 フロービルダー UI のルーティングにクエリパラメータを採用
+
+**決定**: `/flows/editor?id=...` / `/flows/logs?id=...` の形式でURLを設計。動的セグメント（`[id]`）は使わない。
+**理由**: Next.js `output: 'export'` では動的ルートに `generateStaticParams()` が必須だが、`'use client'` との共存ができず、Server Component ラッパー経由でも Next.js が検出しないケースがあった。クエリパラメータ方式なら静的ページとして問題なくビルドできる。
+**却下案**: `/flows/[id]/edit` 動的ルート方式（理由: Next.js 15 static export でビルドエラー解消不能）
+**再考トリガー**: Next.js のバージョンアップで制約が変わったとき、またはSPA的なルーティングライブラリ（TanStack Router等）に移行するとき。
+
+---
+
+## 2026-03-31 フロー実行エンジンのwaitノード再開はcronポーリング方式
+
+**決定**: waitノードで実行を中断し `resume_at` をDBに保存。cron（*/5 * * * *）で `getWaitingFlowExecutions()` を呼び出し、再開すべき実行をキューに再投入する。
+**理由**: Cloudflare Workers の Queues には遅延配信機能がないため、タイマーベースの再開ができない。D1にresumeAtを保存してポーリングするのが最もシンプル。
+**却下案**: Durable Objects でタイマー管理（理由: 実装複雑度が高く、現時点でオーバースペック）
+**再考トリガー**: Cloudflare Queues に遅延配信が追加されたとき。
+
+---
+
 ## 2026-03-30 Gemini モデルは gemini-2.5-flash を使用
 
 **決定**: デフォルトの Gemini モデルとして `gemini-2.5-flash` を採用。
