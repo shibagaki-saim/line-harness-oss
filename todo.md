@@ -63,28 +63,33 @@
 **完了条件:** 管理画面でノード・エッジを繋いでフローを作成し、LINEユーザーに自動実行されること
 
 ### 2-A: DB・インフラ
-- [ ] migration 002_flows.sql 作成（3テーブル）
+- [x] migration 015_flows.sql 作成（3テーブル）← 2026-03-30完了
   - flows / flow_executions / flow_execution_logs
-- [ ] lmo-meta に migration 適用・テーブル確認
-- [ ] Queue 確認（lmo-flow-execution）
+- [x] lmo-meta に migration 適用・テーブル確認 ← 2026-03-30完了
+- [x] Queue 確認（lmo-flow-execution）← 2026-03-30完了
 
 ### 2-B: Worker バックエンド
-- [ ] `apps/worker/src/routes/flows.ts` 実装
+- [x] `packages/db/src/flows.ts` 実装（型定義・CRUD・実行管理）← 2026-03-30完了
+- [x] `apps/worker/src/routes/flows.ts` 実装 ← 2026-03-31完了
   - GET/POST/PUT/DELETE /api/flows（CRUD）
   - POST /api/flows/:id/trigger（手動起動）
   - GET  /api/flows/:id/executions（実行ログ）
-- [ ] `apps/worker/src/queues/flow-handler.ts` 実装
-  - 条件分岐（タグ・スコア・メタデータ）評価
-  - 遅延実行（cron で next_run_at ポーリング）
-- [ ] **動作テスト**: APIでフロー作成 → trigger → 実行ログ確認
+  - GET  /api/flows/executions/:id/logs（ノードログ）
+- [x] `apps/worker/src/queues/flow-handler.ts` 実装 ← 2026-03-31完了
+  - 条件分岐（タグ有無・スコア閾値）評価
+  - 待機ノード（resume_at でDB保存、cron で再開）
+  - cron から `resumeWaitingFlows` を呼び出す形式
+- [x] wrangler.toml: lmo-flow-execution consumer 追加 ← 2026-03-31完了
+- [x] **動作テスト**: APIでフロー作成 → trigger → completed確認 ← 2026-03-31完了
 
 ### 2-C: 管理画面 UI
-- [ ] `@xyflow/react` インストール（apps/web）
-- [ ] `/flows` — フロー一覧ページ
-- [ ] `/flows/:id/edit` — ビジュアルエディタ（ノード&エッジ）
-  - ノード種類: 送信・条件分岐・タグ付与・待機・終了
-- [ ] `/flows/:id/logs` — 実行ログページ
-- [ ] サイドバー「配信」タブに flows 追加
+- [x] `@xyflow/react` インストール（apps/web）← 2026-03-31完了
+- [x] `/flows` — フロー一覧ページ ← 2026-03-31完了
+- [x] `/flows/editor?id=...` — ビジュアルエディタ（ノード&エッジ）← 2026-03-31完了
+  - ノード種類: trigger・send_message・add_tag・remove_tag・condition・wait・end
+- [x] `/flows/logs?id=...` — 実行ログページ ← 2026-03-31完了
+- [x] サイドバーに「フロービルダー」セクション追加 ← 2026-03-31完了
+- [x] apps/web ビルド成功確認 ← 2026-03-31完了
 - [ ] **動作テスト**: エディタでフロー作成 → 保存 → LINEユーザーに実行確認
 
 ---
@@ -128,9 +133,14 @@
 
 ---
 
-## 📍 次回セッション引き継ぎ（最終更新: 2026-03-30）
-- 現在取り組んでいる箇所: Phase 1 完了 → Phase 2（ビジュアルフロービルダー）着手
-- 次にやること: Phase 2-A DBマイグレーション（flows/flow_executions/flow_execution_logs）
+## 📍 次回セッション引き継ぎ（最終更新: 2026-03-31）
+- 現在取り組んでいる箇所: Phase 2-C 完了（ビルド成功）→ 実機テスト待ち
+- 次にやること:
+  1. 管理画面で `/flows` を開きフロー一覧確認
+  2. 「新規フロー」作成 → `/flows/editor?id=...` でノード追加・保存
+  3. 「起動」ボタンで手動実行 → 実行ログで completed 確認
+  4. LINEユーザーにメッセージ送信フローを作成して実機テスト
+  5. テスト完了後 Phase 3（ASP機能）へ
 - AI設定状況（DB内、本番稼働中）:
   - Provider: Gemini 2.5 Flash（ID: 7c92e9b1-3e24-4c84-b21c-6e29bc76fe1e）
   - Persona: デフォルトAI（ID: 6413bf09-9755-4c46-9ca4-c90e455c04e6、max_tokens: 1000）
@@ -140,3 +150,5 @@
 - 注意事項:
   - Cloudflare Workers では Buffer 未対応 → btoa/atob を使う
   - LIFF_URL未設定のまま（未使用機能なので後回し）
+  - Next.js static export（output: 'export'）では動的セグメント[id]に generateStaticParams が必須だが、'use client' と同一ファイルに書けない制約あり → クエリパラメータ方式（/flows/editor?id=...）で回避
+  - フロー実行エンジン: 待機ノードは resume_at をDBに保存し、cron（*/5 * * * *）でresumeWaitingFlowsを呼び出す

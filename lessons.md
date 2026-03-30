@@ -24,6 +24,14 @@
 
 ---
 
+## 2026-03-31 Next.js static export で動的ルートを使う場合の制約
+
+**教訓**: `output: 'export'` の Next.js では動的ルート（`[id]`）に `generateStaticParams()` が必須。しかし `'use client'` コンポーネントと同一ファイルに書けない（エラーになる）。さらに Server Component ラッパーからのre-exportでも Next.js が検出できない場合がある。**クエリパラメータ方式**（`/page?id=xxx`）で動的セグメントを回避するのが最もシンプル。
+**背景**: `/flows/[id]/edit` と `/flows/[id]/logs` を作ったが、ビルドエラーが繰り返し発生した。
+**適用場面**: Next.js static export で管理画面の詳細ページ（IDで絞り込む系）を作るとき。動的セグメントを使わずクエリパラメータで実装する。
+
+---
+
 ## 2026-03-30 Gemini API のモデル名は定期的に廃止される
 
 **教訓**: `gemini-1.5-flash` は新規ユーザー向けに廃止済み。`gemini-2.5-flash` など最新モデルを使う。モデル一覧は `GET /v1beta/models` で確認できる。
