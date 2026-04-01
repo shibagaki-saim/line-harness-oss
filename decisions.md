@@ -45,6 +45,15 @@
 
 ---
 
+## 2026-04-01 Vercel デプロイはリポジトリルート起点・web プロジェクト向け
+
+**決定**: リポジトリルートに `vercel.json`（`pnpm --filter web build` / `apps/web/out`）と `.vercel/project.json`（web プロジェクト向け）を配置し、ルートから `vercel deploy --prod` でデプロイする。
+**理由**: `apps/web` は `@line-crm/shared`（workspace:*）と `../../package.json` 参照を持つため、monorepo 全体のコンテキストが必要。`apps/web/` 単体での CLI デプロイでは workspace パッケージが解決できない。
+**却下案**: Root Directory = `apps/web` + `cd ../..` コマンド方式（理由: CLI デプロイ時に `apps/web/apps/web` パス二重エラー）、apps/web/ 単体デプロイ（理由: workspace 依存解決不可）
+**再考トリガー**: git 連携（GitHub → Vercel）に切り替えるとき。その場合は Root Directory = `apps/web` + installCommand でルートから pnpm install する方式が正しい。
+
+---
+
 ## 2026-03-30 Gemini モデルは gemini-2.5-flash を使用
 
 **決定**: デフォルトの Gemini モデルとして `gemini-2.5-flash` を採用。
