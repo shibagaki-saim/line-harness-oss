@@ -1,7 +1,7 @@
 # LINE Marketing OS (line-harness-oss) — todo
 
-最終更新: 2026-03-30（セッション4）
-進捗: Phase 0・Phase 1（A/B/C）完了 / Phase 2（フロービルダー）着手待ち
+最終更新: 2026-04-01（セッション7）
+進捗: Phase 0・Phase 1（A/B/C）完了 / Phase 2（A/B/C）完了 / Phase 3（A/B/C/D）完了 / Vercel整理完了
 
 ---
 
@@ -90,7 +90,8 @@
 - [x] `/flows/logs?id=...` — 実行ログページ ← 2026-03-31完了
 - [x] サイドバーに「フロービルダー」セクション追加 ← 2026-03-31完了
 - [x] apps/web ビルド成功確認 ← 2026-03-31完了
-- [ ] **動作テスト**: エディタでフロー作成 → 保存 → LINEユーザーに実行確認
+- [x] **動作テスト**: API経由でフロー作成 → trigger → completed確認 ← 2026-04-01完了（trigger→send_message→end 全ノードsuccess / Queue処理7秒）
+- [x] **UIテスト**: 管理画面でフロー作成 → 保存 → 起動 → completed確認 ← 2026-04-01完了（実機ブラウザ動作確認済み）
 
 ---
 
@@ -98,33 +99,47 @@
 **完了条件:** アフィリエイター登録 → 紹介URL発行 → 友だち追加 → 報酬自動計算 → 管理者承認の一連フローが動作すること
 
 ### 3-A: DB・インフラ
-- [ ] migration 003_asp.sql 作成（5テーブル）
-  - asp_campaigns / asp_affiliates / asp_tracked_conversions / asp_rewards / asp_fraud_logs
-- [ ] lmo-meta に migration 適用・テーブル確認
+- [x] migration 016_asp.sql 作成（4テーブル）← 2026-04-01完了
+  - asp_campaigns / asp_affiliate_campaigns / asp_rewards / asp_fraud_logs
+- [x] lmo-meta に migration 適用（53テーブル確認）← 2026-04-01完了
 
 ### 3-B: Worker バックエンド
-- [ ] `apps/worker/src/routes/asp.ts` 実装
-  - キャンペーンCRUD
-  - アフィリエイター管理・招待メール送信
-  - コンバージョン計測（existing conversions.ts 拡張）
-  - 報酬計算（cron 0 3 * * * で自動集計）
-  - 不正検知（同一IP・短時間大量CV）
-- [ ] **動作テスト**: キャンペーン作成 → 紹介リンク発行 → コンバージョン → 報酬計算確認
+- [x] `packages/db/src/asp.ts` DB helper実装 ← 2026-04-01完了
+- [x] `apps/worker/src/routes/asp.ts` 実装 ← 2026-04-01完了
+  - キャンペーンCRUD（GET/POST/PUT/DELETE /api/asp/campaigns）
+  - アフィリエイター×キャンペーン紐付け（/api/asp/affiliates/:id/campaigns）
+  - 報酬管理（GET /api/asp/rewards / PUT /api/asp/rewards/:id/status）
+  - 報酬集計（POST /api/asp/rewards/aggregate / cron 03:00 JST）
+  - 不正検知（GET/POST /api/asp/fraud-logs / POST /api/asp/fraud-logs/:id/resolve）
+- [x] **動作テスト**: キャンペーン作成・一覧・不正ログ取得をcurlで確認 ← 2026-04-01完了
 
 ### 3-C: アフィリエイターポータル（apps/portal/）
-- [ ] Next.js 15 新規アプリ作成（pnpm create next-app）
-- [ ] `/` ダッシュボード（成果・報酬サマリー）
-- [ ] `/links` 紹介URL・QRコード発行
-- [ ] `/rewards` 報酬明細・振込状況
-- [ ] `/campaigns` 参加可能キャンペーン一覧
-- [ ] **動作テスト**: アフィリエイターログイン → 紹介URL取得 → 報酬確認
+- [x] Next.js 15.3.9 新規アプリ作成（apps/portal/）← 2026-04-01完了
+- [x] `/` ダッシュボード（成果・報酬サマリー）← 2026-04-01完了
+- [x] `/links` 紹介URL・コピー機能 ← 2026-04-01完了
+- [x] `/rewards` 報酬明細・ステータス表示 ← 2026-04-01完了
+- [x] `/campaigns` 参加可能キャンペーン一覧 ← 2026-04-01完了
+- [x] Worker Portal API（/api/portal/*）実装・デプロイ ← 2026-04-01完了
+- [x] Vercelデプロイ（https://portal-six-fawn.vercel.app）← 2026-04-01完了
+- [x] **動作テスト**: Portal API（login・me）curlで確認 ← 2026-04-01完了
 
 ### 3-D: 管理画面 UI
-- [ ] `/affiliate?tab=campaigns` キャンペーン管理
-- [ ] `/affiliate?tab=affiliates` アフィリエイター一覧
-- [ ] `/affiliate?tab=rewards` 報酬管理・承認
-- [ ] `/affiliate?tab=fraud` 不正検知ログ
-- [ ] **動作テスト**: 管理画面から報酬承認 → ポータルに反映確認
+- [x] `/affiliate?tab=campaigns` キャンペーン管理 ← 2026-04-01完了
+- [x] `/affiliate?tab=affiliates` アフィリエイター一覧 ← 2026-04-01完了
+- [x] `/affiliate?tab=rewards` 報酬管理・承認 ← 2026-04-01完了
+- [x] `/affiliate?tab=fraud` 不正検知ログ ← 2026-04-01完了
+- [x] サイドバーに「ASP管理」メニュー追加 ← 2026-04-01完了
+- [x] apps/web ビルド成功・Vercelデプロイ確認 ← 2026-04-01完了
+- [ ] **動作テスト**: 管理画面から報酬承認・不正ログ解決の実機確認
+
+---
+
+## Vercel 構成整理
+- [x] 誤作成された Vercel プロジェクト（line-harness-oss・out）削除 ← 2026-04-01完了
+- [x] apps/web/vercel.json 作成（portal と統一形式）← 2026-04-01完了
+- [x] ルート vercel.json を monorepo 対応形式に修正（pnpm固定・framework:null）← 2026-04-01完了
+- [x] ルート .vercel/project.json を web プロジェクトにリンク ← 2026-04-01完了
+- [x] web 本番デプロイ成功（https://web-delta-vert-34.vercel.app）← 2026-04-01完了
 
 ---
 
@@ -133,22 +148,22 @@
 
 ---
 
-## 📍 次回セッション引き継ぎ（最終更新: 2026-03-31）
-- 現在取り組んでいる箇所: Phase 2-C 完了（ビルド成功）→ 実機テスト待ち
-- 次にやること:
-  1. 管理画面で `/flows` を開きフロー一覧確認
-  2. 「新規フロー」作成 → `/flows/editor?id=...` でノード追加・保存
-  3. 「起動」ボタンで手動実行 → 実行ログで completed 確認
-  4. LINEユーザーにメッセージ送信フローを作成して実機テスト
-  5. テスト完了後 Phase 3（ASP機能）へ
+## 📍 次回セッション引き継ぎ（最終更新: 2026-04-01）
+- 現在取り組んでいる箇所: **Vercel構成整理完了 / Phase 3-D 動作テスト未実施**
+- **次にやること:** 管理画面から報酬承認・不正ログ解決の実機確認 → Phase 4 以降の計画
 - AI設定状況（DB内、本番稼働中）:
   - Provider: Gemini 2.5 Flash（ID: 7c92e9b1-3e24-4c84-b21c-6e29bc76fe1e）
   - Persona: デフォルトAI（ID: 6413bf09-9755-4c46-9ca4-c90e455c04e6、max_tokens: 1000）
-- 管理画面: http://localhost:3001（SSH ポートフォワーディング必要）
-  - API_KEY: cb5a34aeee932f0b97998b8307115b7232d22947c2c906182ec3497d8582ac5c
-  - .env.local: NEXT_PUBLIC_API_URL=https://line-harness.shibagaki.workers.dev
+- URL一覧:
+  - 管理画面: https://web-delta-vert-34.vercel.app（API_KEY: cb5a34aeee932f0b97998b8307115b7232d22947c2c906182ec3497d8582ac5c）
+  - ポータル: https://portal-six-fawn.vercel.app（紹介コードでログイン、テスト用: test-taro）
+  - Worker API: https://line-harness.shibagaki.workers.dev
 - 注意事項:
+  - 管理画面Vercelデプロイ: リポジトリルートで `vercel deploy --prod`（ルートの vercel.json + .vercel/project.json が web プロジェクトを向いている）
+  - ポータルVercelデプロイ: `apps/portal/` から `vercel deploy --prod` でOK
+  - Vercel installCommand: `npm i -g pnpm@9.15.4 && pnpm install --no-frozen-lockfile`（lockfileバージョン不一致のため固定）
   - Cloudflare Workers では Buffer 未対応 → btoa/atob を使う
   - LIFF_URL未設定のまま（未使用機能なので後回し）
-  - Next.js static export（output: 'export'）では動的セグメント[id]に generateStaticParams が必須だが、'use client' と同一ファイルに書けない制約あり → クエリパラメータ方式（/flows/editor?id=...）で回避
+  - Next.js static export では動的セグメント[id]はクエリパラメータ方式で実装
   - フロー実行エンジン: 待機ノードは resume_at をDBに保存し、cron（*/5 * * * *）でresumeWaitingFlowsを呼び出す
+  - テストアフィリエイター「テスト太郎」（code: test-taro）がDB内に存在

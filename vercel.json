@@ -1,0 +1,6 @@
+{
+  "installCommand": "npm i -g pnpm@9.15.4 && pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm --filter web build",
+  "outputDirectory": "apps/web/out",
+  "framework": null
+}
