@@ -108,6 +108,15 @@
 
 ---
 
+## 2026-04-02 LINEトークン更新は stateless token（client_credentials）方式で実装
+
+**決定**: LINE Channel Access Token の自動更新は `POST https://api.line.me/v2/oauth/accessToken` の `client_credentials` grant を使い、30日有効のstatelessトークンを再発行する方式を採用。
+**理由**: Long-lived トークンは Developer Console で手動発行のみ（API更新不可）。Stateless トークンは channel_id + channel_secret があればAPIで発行できるため自動化が容易。有効期限30日を D1 に記録して7日前に自動更新することで期限切れを防ぐ。
+**却下案**: Stateful channel access token v2.1（理由: JWT assertion キーの管理が複雑でオーバースペック）
+**再考トリガー**: LINE が channel_secret を使ったトークン発行方式を廃止したとき。
+
+---
+
 ## 2026-04-02 CTR 計測は既存 link_clicks に broadcast_id カラム追加で実現
 
 **決定**: 新テーブル `broadcast_clicks` を作らず、既存の `link_clicks` テーブルに `broadcast_id` FK カラムを追加する。送信時に tracked URL へ `?b=broadcastId` を自動付与し、クリック時に Worker がパラメータを取得して記録する。

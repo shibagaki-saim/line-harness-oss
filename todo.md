@@ -244,17 +244,23 @@
 **参考:** upstream v0.8.0 token_refresh サービス
 
 ### 8-A: DB・インフラ
-- [ ] `line_accounts` テーブルに `token_expires_at` カラム追加（migration 018）
+- [x] `line_accounts` テーブルに `token_expires_at` カラム追加（migration 009 適用済み）← 2026-04-02完了
+  - `ALTER TABLE line_accounts ADD COLUMN token_expires_at TEXT` を D1 remote に直接適用
 
 ### 8-B: Worker バックエンド
-- [ ] `apps/worker/src/services/token-refresh.ts` 実装
-  - LINE Channel Access Token 発行 API（`/oauth/v2.1/token`）呼び出し
-  - 有効期限30日未満になったら自動更新
-  - 更新後に D1 へ保存
-- [ ] cron（`0 0 * * *`）から `refreshExpiringTokens()` を呼び出す処理追加
+- [x] `apps/worker/src/services/token-refresh.ts` 実装（フォーク元で既存）← 2026-04-02確認
+  - `POST https://api.line.me/v2/oauth/accessToken`（client_credentials）でstatelessトークン発行
+  - 有効期限7日未満 or NULL → 自動更新、D1 に token_expires_at 保存
+- [x] cron（`0 0 * * *`）から `refreshLineAccessTokens()` 呼び出し追加済み ← 2026-04-02確認
+- [x] `GET /api/line-accounts` レスポンスに `tokenExpiresAt` 追加 ← 2026-04-02完了
+- [x] `POST /api/line-accounts/:id/refresh-token` 手動更新エンドポイント追加 ← 2026-04-02完了
+- [x] `GET /api/line-accounts` の friends/messages_log クエリの `line_account_id` バグ修正 ← 2026-04-02完了
+  - `friends` テーブルに `line_account_id` カラムが存在しなかったため、全件集計に修正
 
 ### 8-C: 管理画面 UI
-- [ ] `/health` ページにトークン有効期限の表示・手動更新ボタン追加
+- [x] `/health` ページにトークン有効期限バッジ（残日数・緑/黄/赤）表示 ← 2026-04-02完了
+- [x] 「トークン更新」ボタンで手動更新対応 ← 2026-04-02完了
+- [x] **動作確認**: Playwright テストで「残30日 (2026/5/2)」バッジと更新ボタン表示確認 ← 2026-04-02完了
 
 ---
 
@@ -388,11 +394,9 @@
 ---
 
 ## 📍 次回セッション引き継ぎ（最終更新: 2026-04-02）
-- 現在取り組んでいる箇所: **Phase 6・7 完了**
-- **次にやること:** Phase 8（LINE チャネルアクセストークン自動更新）
-  - 8-A: `line_accounts` に `token_expires_at` カラム追加（migration）
-  - 8-B: `token-refresh.ts` サービス実装
-  - 8-C: `/health` ページにトークン有効期限表示・手動更新ボタン
+- 現在取り組んでいる箇所: **Phase 8 完了**
+- **次にやること:** 残タスクなし（Phase 0〜10・Phase 6〜8 全完了）
+  - 必要に応じて新機能追加や改善タスクを検討する
 - Playwright: `apps/e2e/` — `npx playwright test` で全テスト実行（tour + interactions + auth + broadcasts 計38テスト）
   - ⚠️ `BASE_URL` 未指定時は `web-delta-vert-34.vercel.app`（stableエイリアス）を使用。ハッシュ付きURLはVercel SSO保護で失敗する
 - 備考: `vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` を使う（リモートビルドが npm fallback するバグを回避）

@@ -96,6 +96,14 @@
 
 ---
 
+## 2026-04-02 Next.js static export のビルドキャッシュが古い出力を返すことがある
+
+**教訓**: `pnpm --filter web build` が成功しても、`.next/` キャッシュが残っていると変更したページコードがビルド出力に含まれないことがある。変更が反映されない場合は `rm -rf apps/web/.next apps/web/out` でキャッシュを完全削除してから再ビルドする。
+**背景**: health/page.tsx に `tokenExpiresAt` を追加してビルド・デプロイしたが、Playwright テストで変更が反映されなかった。キャッシュ削除後に再ビルドしたところ正常に動作した。
+**適用場面**: ページコードを変更したのにデプロイ後も変更が見えない場合。
+
+---
+
 ## 2026-04-02 LIFF アプリは LINE Login チャネルに Messaging API チャネルのリンクが必要
 
 **教訓**: LIFF の「友だち追加オプション（Bot prompt: Aggressive）」を使うには、LINE Login チャネルに Messaging API チャネルの公式アカウントを Linked OA として紐付ける必要がある。未設定だと "There is no login bot linked to this channel" エラーになる。
