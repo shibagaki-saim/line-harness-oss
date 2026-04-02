@@ -266,6 +266,18 @@
 
 ---
 
+## 将来タスク（バックログ）
+
+### マルチアカウント対応: friends テーブルへの line_account_id 追加
+- [ ] `friends` テーブルに `line_account_id` カラム追加（migration）
+  - 現状: `GET /api/line-accounts` の stats（friendCount・activeScenarios・messagesThisMonth）は全アカウント合算値を返している
+  - 本来: アカウントごとに絞り込んだ統計値を返すべき
+  - 対応: `ALTER TABLE friends ADD COLUMN line_account_id TEXT REFERENCES line_accounts(id)` を追加し、Worker の統計クエリに `WHERE f.line_account_id = ?` を復元する
+
+---
+
+---
+
 ## Phase 9: 既存ページ 動作確認ツアー
 **目的:** フォーク元から引き継いだ未テストページを順番に動作確認し、バグがあれば修正する
 **進め方:** 1ページずつ確認 → NG なら即修正 → [x] にして次へ
