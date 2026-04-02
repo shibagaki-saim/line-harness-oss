@@ -30,15 +30,15 @@ import type { Broadcast } from '@line-crm/shared'
 /** Broadcast type from API (now camelCase after worker serialization) */
 export type ApiBroadcast = Broadcast
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://line-harness.shibagaki.workers.dev'
 
 /**
- * Read the API key from localStorage (set during login).
+ * Read the session token from localStorage (set during login).
  * Never embed secrets in the client bundle via NEXT_PUBLIC_* env vars.
  */
-function getApiKey(): string {
+function getSessionToken(): string {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('lh_api_key') || ''
+    return localStorage.getItem('lh_session_token') || ''
   }
   return ''
 }
@@ -48,10 +48,17 @@ export async function fetchApi<T>(path: string, options?: RequestInit): Promise<
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${getApiKey()}`,
+      'Authorization': `Bearer ${getSessionToken()}`,
       ...options?.headers,
     },
   })
+  if (res.status === 401 && typeof window !== 'undefined') {
+    localStorage.removeItem('lh_session_token')
+    localStorage.removeItem('lh_staff_name')
+    localStorage.removeItem('lh_staff_role')
+    window.location.href = '/login'
+    throw new Error('Unauthorized')
+  }
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   return res.json() as Promise<T>
 }
@@ -181,6 +188,34 @@ export const api = {
       fetchApi<ApiResponse<null>>(`/api/broadcasts/${id}`, { method: 'DELETE' }),
     send: (id: string) =>
       fetchApi<ApiResponse<ApiBroadcast>>(`/api/broadcasts/${id}/send`, { method: 'POST' }),
+    preview: (id: string) =>
+      fetchApi<ApiResponse<{
+        recipientCount: number
+        title: string
+        messageType: string
+        messageContent: string
+        targetType: string
+        targetTagId: string | null
+      }>>(`/api/broadcasts/${id}/preview`, { method: 'POST' }),
+    report: (id: string) =>
+      fetchApi<ApiResponse<{
+        broadcastId: string
+        title: string
+        status: string
+        totalCount: number
+        successCount: number
+        clickCount: number
+        ctr: number | null
+        sentAt: string | null
+        clicks: Array<{
+          id: string
+          friendId: string | null
+          friendName: string | null
+          clickedAt: string
+          linkName: string | null
+          originalUrl: string | null
+        }>
+      }>>(`/api/broadcasts/${id}/report`),
   },
 
   // ── Round 2 APIs ─────────────────────────────────────────────────────────
@@ -479,6 +514,8 @@ export const api = {
       }),
     getMigration: (migrationId: string) =>
       fetchApi<ApiResponse<AccountMigration>>(`/api/accounts/migrations/${migrationId}`),
+    refreshToken: (accountId: string) =>
+      fetchApi<ApiResponse<LineAccount>>(`/api/line-accounts/${accountId}/refresh-token`, { method: 'POST' }),
   },
   staff: {
     list: () =>
@@ -543,6 +580,142 @@ export const api = {
         fetchApi<{ success: boolean; data: AiProactiveConfig }>('/api/ai/proactive', { method: 'POST', body: JSON.stringify(data) }),
     },
   },
+  flows: {
+    list: () => fetchApi<{ success: boolean; data: Flow[] }>('/api/flows'),
+    get: (id: string) => fetchApi<{ success: boolean; data: Flow }>(`/api/flows/${id}`),
+    create: (data: { name: string; description?: string; trigger_type?: string; nodes?: string; edges?: string; is_active?: number }) =>
+      fetchApi<{ success: boolean; data: Flow }>('/api/flows', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { name?: string; description?: string; trigger_type?: string; trigger_value?: string; nodes?: string; edges?: string; is_active?: number }) =>
+      fetchApi<{ success: boolean }>(`/api/flows/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      fetchApi<{ success: boolean }>(`/api/flows/${id}`, { method: 'DELETE' }),
+    trigger: (id: string, friendId?: string) =>
+      fetchApi<{ success: boolean; data: FlowExecution }>(`/api/flows/${id}/trigger`, { method: 'POST', body: JSON.stringify({ friend_id: friendId }) }),
+    executions: (id: string) => fetchApi<{ success: boolean; data: FlowExecution[] }>(`/api/flows/${id}/executions`),
+    executionLogs: (executionId: string) => fetchApi<{ success: boolean; data: FlowExecutionLog[] }>(`/api/flows/executions/${executionId}/logs`),
+  },
+  asp: {
+    campaigns: {
+      list: () => fetchApi<{ success: boolean; data: AspCampaign[] }>('/api/asp/campaigns'),
+      get: (id: string) => fetchApi<{ success: boolean; data: AspCampaign }>(`/api/asp/campaigns/${id}`),
+      create: (data: { name: string; description?: string | null; commissionRate?: number; startDate?: string | null; endDate?: string | null }) =>
+        fetchApi<{ success: boolean; data: AspCampaign }>('/api/asp/campaigns', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: { name?: string; description?: string | null; commissionRate?: number; isActive?: boolean; startDate?: string | null; endDate?: string | null }) =>
+        fetchApi<{ success: boolean; data: AspCampaign }>(`/api/asp/campaigns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (id: string) => fetchApi<{ success: boolean; data: null }>(`/api/asp/campaigns/${id}`, { method: 'DELETE' }),
+    },
+    rewards: {
+      list: (params?: { status?: string; period?: string; affiliateId?: string }) =>
+        fetchApi<{ success: boolean; data: AspReward[] }>('/api/asp/rewards?' + new URLSearchParams((params ?? {}) as Record<string, string>)),
+      updateStatus: (id: string, status: string, note?: string | null) =>
+        fetchApi<{ success: boolean; data: null }>(`/api/asp/rewards/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, note }) }),
+      aggregate: (period?: string) =>
+        fetchApi<{ success: boolean; data: { period: string } }>('/api/asp/rewards/aggregate', { method: 'POST', body: JSON.stringify({ period }) }),
+    },
+    fraudLogs: {
+      list: (params?: { resolved?: boolean; affiliateId?: string }) => {
+        const qs = new URLSearchParams();
+        if (params?.resolved !== undefined) qs.set('resolved', String(params.resolved));
+        if (params?.affiliateId) qs.set('affiliateId', params.affiliateId);
+        return fetchApi<{ success: boolean; data: AspFraudLog[] }>(`/api/asp/fraud-logs?${qs}`);
+      },
+      resolve: (id: string) => fetchApi<{ success: boolean; data: null }>(`/api/asp/fraud-logs/${id}/resolve`, { method: 'POST' }),
+    },
+  },
+  richMenus: {
+    list: () => fetchApi<{ success: boolean; data: RichMenu[] }>('/api/rich-menus'),
+    create: (body: RichMenuCreate) =>
+      fetchApi<{ success: boolean; data: { richMenuId: string } }>('/api/rich-menus', {
+        method: 'POST', body: JSON.stringify(body),
+      }),
+    delete: (id: string) =>
+      fetchApi<{ success: boolean; data: null }>(`/api/rich-menus/${id}`, { method: 'DELETE' }),
+    setDefault: (id: string) =>
+      fetchApi<{ success: boolean; data: null }>(`/api/rich-menus/${id}/default`, { method: 'POST' }),
+    uploadImage: (id: string, base64: string, contentType: 'image/png' | 'image/jpeg') =>
+      fetchApi<{ success: boolean; data: null }>(`/api/rich-menus/${id}/image`, {
+        method: 'POST', body: JSON.stringify({ image: base64, contentType }),
+      }),
+  },
+  analytics: {
+    overview: (accountId?: string | null) => {
+      const qs = accountId ? `?accountId=${accountId}` : '';
+      return fetchApi<{ success: boolean; data: AnalyticsOverview }>(`/api/analytics/overview${qs}`);
+    },
+    friends: (days = 30, accountId?: string | null) => {
+      const qs = new URLSearchParams({ days: String(days) });
+      if (accountId) qs.set('accountId', accountId);
+      return fetchApi<{ success: boolean; data: FriendDayCount[] }>(`/api/analytics/friends?${qs}`);
+    },
+    broadcasts: (limit = 10, accountId?: string | null) => {
+      const qs = new URLSearchParams({ limit: String(limit) });
+      if (accountId) qs.set('accountId', accountId);
+      return fetchApi<{ success: boolean; data: BroadcastStat[] }>(`/api/analytics/broadcasts?${qs}`);
+    },
+    flows: () => fetchApi<{ success: boolean; data: FlowAnalytics }>('/api/analytics/flows'),
+    ai: (days = 30) =>
+      fetchApi<{ success: boolean; data: AiAnalytics }>(`/api/analytics/ai?days=${days}`),
+  },
+}
+
+// ─── Rich Menu types ──────────────────────────────────────────────────────────
+
+export type RichMenuBounds = { x: number; y: number; width: number; height: number }
+export type RichMenuAction =
+  | { type: 'message'; text: string }
+  | { type: 'uri'; uri: string }
+  | { type: 'postback'; data: string; displayText?: string }
+  | { type: 'datetimepicker'; data: string; mode: 'date' | 'time' | 'datetime' }
+
+export type RichMenuArea = { bounds: RichMenuBounds; action: RichMenuAction }
+
+export type RichMenu = {
+  richMenuId: string
+  size: { width: number; height: number }
+  selected: boolean
+  name: string
+  chatBarText: string
+  areas: RichMenuArea[]
+}
+
+export type RichMenuCreate = Omit<RichMenu, 'richMenuId' | 'selected'>
+
+// ─── Analytics types ─────────────────────────────────────────────────────────
+
+export type AnalyticsOverview = {
+  total_friends: number;
+  active_friends: number;
+  total_broadcasts_sent: number;
+  total_messages_sent: number;
+}
+
+export type FriendDayCount = {
+  date: string;
+  count: number;
+}
+
+export type BroadcastStat = {
+  id: string;
+  title: string;
+  total_count: number;
+  success_count: number;
+  sent_at: string | null;
+}
+
+export type FlowAnalytics = {
+  total_flows: number;
+  active_flows: number;
+  executions_running: number;
+  executions_completed: number;
+  executions_failed: number;
+  executions_waiting: number;
+}
+
+export type AiAnalytics = {
+  total: number;
+  completed: number;
+  failed: number;
+  total_tokens: number;
 }
 
 // ─── AI types ───────────────────────────────────────────────────────────────
@@ -576,4 +749,45 @@ export type HandoverRequest = {
 export type AiProactiveConfig = {
   id: string; persona_id: string; trigger_type: string; trigger_value: string;
   message_template: string; is_active: number; created_at: string; updated_at: string;
+}
+
+// ─── Flow types ─────────────────────────────────────────────────────────────
+
+export type Flow = {
+  id: string; name: string; description: string | null;
+  trigger_type: string; trigger_value: string | null;
+  nodes: string; edges: string;
+  is_active: number; created_at: string; updated_at: string;
+}
+export type FlowExecution = {
+  id: string; flow_id: string; friend_id: string | null;
+  status: 'running' | 'completed' | 'failed' | 'waiting';
+  current_node_id: string | null; resume_at: string | null;
+  created_at: string; updated_at: string;
+}
+export type FlowExecutionLog = {
+  id: string; execution_id: string; node_id: string; node_type: string;
+  status: string; output: string | null; created_at: string;
+}
+
+// ─── ASP types ───────────────────────────────────────────────────────────────
+
+export type AspCampaign = {
+  id: string; name: string; description: string | null;
+  commission_rate: number; is_active: number;
+  start_date: string | null; end_date: string | null;
+  created_at: string; updated_at: string;
+}
+export type AspReward = {
+  id: string; affiliate_id: string; campaign_id: string | null;
+  period: string; conversions: number; amount: number;
+  status: 'pending' | 'approved' | 'paid' | 'rejected';
+  note: string | null; created_at: string; updated_at: string;
+  affiliate_name: string; campaign_name: string | null;
+}
+export type AspFraudLog = {
+  id: string; affiliate_id: string | null; ip_address: string | null;
+  reason: string; severity: 'low' | 'medium' | 'high';
+  resolved: number; created_at: string;
+  affiliate_name: string | null;
 }

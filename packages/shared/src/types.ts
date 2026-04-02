@@ -284,6 +284,8 @@ export interface LineAccount {
   channelSecret: string;
   /** 有効/無効 */
   isActive: boolean;
+  /** トークン有効期限 (ISO 8601, null = 不明) */
+  tokenExpiresAt: string | null;
   /** 作成日時 (ISO 8601) */
   createdAt: string;
   /** 更新日時 (ISO 8601) */

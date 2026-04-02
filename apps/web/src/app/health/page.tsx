@@ -10,6 +10,7 @@ interface LineAccount {
   channelId: string
   name: string
   isActive: boolean
+  tokenExpiresAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -78,6 +79,7 @@ export default function HealthPage() {
   const [migrateFrom, setMigrateFrom] = useState<string | null>(null)
   const [migrateToId, setMigrateToId] = useState('')
   const [migrating, setMigrating] = useState(false)
+  const [refreshingTokenId, setRefreshingTokenId] = useState<string | null>(null)
 
   const loadAccounts = useCallback(async () => {
     setLoading(true)
@@ -155,6 +157,32 @@ export default function HealthPage() {
     }
   }
 
+  const handleRefreshToken = async (accountId: string) => {
+    setRefreshingTokenId(accountId)
+    try {
+      const res = await api.health.refreshToken(accountId)
+      if (res.success) {
+        const updated = res.data as unknown as LineAccount
+        setAccounts((prev) => prev.map((a) => a.id === accountId ? { ...a, tokenExpiresAt: updated.tokenExpiresAt } : a))
+      } else {
+        setError('トークンの更新に失敗しました')
+      }
+    } catch {
+      setError('トークン更新リクエストに失敗しました')
+    } finally {
+      setRefreshingTokenId(null)
+    }
+  }
+
+  const getTokenStatus = (tokenExpiresAt: string | null): { label: string; color: string; bg: string; daysLeft: number | null } => {
+    if (!tokenExpiresAt) return { label: '不明', color: 'text-gray-500', bg: 'bg-gray-100', daysLeft: null }
+    const daysLeft = Math.ceil((new Date(tokenExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    if (daysLeft < 0) return { label: '期限切れ', color: 'text-red-700', bg: 'bg-red-100', daysLeft }
+    if (daysLeft <= 7) return { label: `残${daysLeft}日`, color: 'text-red-700', bg: 'bg-red-100', daysLeft }
+    if (daysLeft <= 14) return { label: `残${daysLeft}日`, color: 'text-yellow-700', bg: 'bg-yellow-100', daysLeft }
+    return { label: `残${daysLeft}日`, color: 'text-green-700', bg: 'bg-green-100', daysLeft }
+  }
+
   const getAccountName = (id: string): string => {
     const account = accounts.find((a) => a.id === id)
     return account?.name || id
@@ -190,6 +218,8 @@ export default function HealthPage() {
               const config = riskConfig[risk]
               const isExpanded = expandedId === account.id
               const logs = healthLogs[account.id] || []
+              const tokenStatus = getTokenStatus(account.tokenExpiresAt)
+              const isRefreshing = refreshingTokenId === account.id
 
               return (
                 <div key={account.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -226,6 +256,28 @@ export default function HealthPage() {
                       </div>
                     </div>
                   </button>
+
+                  {/* Token expiry row */}
+                  <div className="px-4 pb-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">トークン有効期限:</span>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${tokenStatus.bg} ${tokenStatus.color}`}>
+                        {tokenStatus.label}
+                      </span>
+                      {account.tokenExpiresAt && (
+                        <span className="text-xs text-gray-400">
+                          ({new Date(account.tokenExpiresAt).toLocaleDateString('ja-JP')})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRefreshToken(account.id)}
+                      disabled={isRefreshing}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isRefreshing ? '更新中...' : 'トークン更新'}
+                    </button>
+                  </div>
 
                   {/* Expanded: Health Logs */}
                   {isExpanded && (
