@@ -53,3 +53,43 @@
 **教訓**: `gemini-1.5-flash` は新規ユーザー向けに廃止済み。`gemini-2.5-flash` など最新モデルを使う。モデル一覧は `GET /v1beta/models` で確認できる。
 **背景**: DBにプロバイダーを登録したが返答が「応答を生成できませんでした。」となり、API直叩きで 404 NOT_FOUND を確認して判明。
 **適用場面**: Gemini モデルを指定するとき・ドキュメント記載のモデル名が古い可能性がある場合。
+
+---
+
+## 2026-04-02 Vercel リモートビルドが npm fallback する → --prebuilt で回避
+
+**教訓**: Vercel CLI 50.x でリモートビルド時に `installCommand` が無視され `npm install` にフォールバックする場合がある（`workspace:*` エラー）。`vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` でローカルビルドの成果物をそのままアップロードすることで回避できる。
+**背景**: recharts 追加後の pnpm-lock.yaml 更新をきっかけに Vercel リモートビルドが npm を使い始め、`EUNSUPPORTEDPROTOCOL workspace:*` エラーが発生した。
+**適用場面**: `vercel deploy --prod` がリモートビルドで失敗するとき。
+
+---
+
+## 2026-04-02 Vercel 環境変数は echo パイプで追加すると \n が混入する
+
+**教訓**: `echo "value" | vercel env add KEY env` とすると末尾に `\n` が混入する。`printf "value" | vercel env add KEY env` を使うか、インタラクティブに入力する。
+**背景**: `NEXT_PUBLIC_API_URL` に `\n` が混入し、fetch URL が `https://...workers.dev\n/api/...` となってログインが失敗した。
+**適用場面**: Vercel CLI で環境変数を追加するとき。
+
+---
+
+## 2026-04-02 LINE リッチメニュー作成には selected フィールドが必須
+
+**教訓**: LINE API でリッチメニューを作成する際、`selected` フィールド（boolean）が必須。省略すると "The request body has 1 error(s)" エラーになる。Worker 側で `const body = { selected: false, ...raw }` のデフォルト補完を入れると安全。
+**背景**: UI のテンプレート JSON に `selected` を含めていなかったため作成が失敗した。
+**適用場面**: LINE リッチメニューの作成 API を呼ぶとき。
+
+---
+
+## 2026-04-02 LINE リッチメニュー画像は size と完全一致するピクセルサイズが必須
+
+**教訓**: LINE API のリッチメニュー画像は、メニューの `size.width × size.height` と完全一致するピクセルサイズでないとアップロードエラーになる。アップロード前に `new Image()` でクライアント側バリデーションを行うと UX が改善する。
+**背景**: 画像サイズ不一致で "The image size is not allowed" エラーが発生。必要サイズをモーダルに表示することで対応。
+**適用場面**: LINE リッチメニューの画像アップロードを実装するとき。
+
+---
+
+## 2026-04-02 LIFF アプリは LINE Login チャネルに Messaging API チャネルのリンクが必要
+
+**教訓**: LIFF の「友だち追加オプション（Bot prompt: Aggressive）」を使うには、LINE Login チャネルに Messaging API チャネルの公式アカウントを Linked OA として紐付ける必要がある。未設定だと "There is no login bot linked to this channel" エラーになる。
+**背景**: LIFF URL を開いたところエラーが表示され、Console の Linked OA 設定で解消した。
+**適用場面**: LIFF で友だち追加フローを実装するとき。

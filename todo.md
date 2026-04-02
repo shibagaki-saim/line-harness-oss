@@ -1,7 +1,7 @@
 # LINE Marketing OS (line-harness-oss) — todo
 
-最終更新: 2026-04-01（セッション7）
-進捗: Phase 0・Phase 1（A/B/C）完了 / Phase 2（A/B/C）完了 / Phase 3（A/B/C/D）完了 / Vercel整理完了
+最終更新: 2026-04-02（セッション8）
+進捗: Phase 0〜5 完了 / LIFF セットアップ完了 / ブロッカー全解消
 
 ---
 
@@ -130,7 +130,7 @@
 - [x] `/affiliate?tab=fraud` 不正検知ログ ← 2026-04-01完了
 - [x] サイドバーに「ASP管理」メニュー追加 ← 2026-04-01完了
 - [x] apps/web ビルド成功・Vercelデプロイ確認 ← 2026-04-01完了
-- [ ] **動作テスト**: 管理画面から報酬承認・不正ログ解決の実機確認
+- [x] **動作テスト**: 報酬集計・不正ログ作成・解決 API を curl で確認 ← 2026-04-02完了
 
 ---
 
@@ -144,13 +144,65 @@
 ---
 
 ## 🚧 ブロッカー
-- [ ] LIFF_URL 未設定（LIFFアプリ作成が必要）← Phase 1-C着手時に対応
+- [x] LIFF_URL 設定完了（LIFF ID: 2009638091-3dH0uRjV）← 2026-04-02完了
 
 ---
 
-## 📍 次回セッション引き継ぎ（最終更新: 2026-04-01）
-- 現在取り組んでいる箇所: **Vercel構成整理完了 / Phase 3-D 動作テスト未実施**
-- **次にやること:** 管理画面から報酬承認・不正ログ解決の実機確認 → Phase 4 以降の計画
+---
+
+## Phase 4: 分析ダッシュボード
+**完了条件:** 管理画面の `/analytics` ページで友だち数推移・配信パフォーマンス・フロー効率をグラフ表示できること
+
+### 4-A: Worker API 統計エンドポイント
+- [x] `packages/db/src/analytics.ts` DB helper 実装 ← 2026-04-02完了
+  - getFriendsTrend / getBroadcastStats / getFlowStats / getAiStats / getOverviewStats
+- [x] `apps/worker/src/routes/analytics.ts` 実装 ← 2026-04-02完了
+  - GET /api/analytics/overview・friends・broadcasts・flows・ai
+- [x] Worker にルート追加・デプロイ ← 2026-04-02完了
+- [x] **動作テスト**: curl で全5エンドポイント確認 ← 2026-04-02完了
+
+### 4-B: 管理画面 UI
+- [x] recharts インストール ← 2026-04-02完了
+- [x] `/analytics` — 分析ダッシュボードページ ← 2026-04-02完了
+  - 友だち数推移グラフ（折れ線）
+  - 配信成功率（積み上げ棒グラフ）
+  - フロー実行サマリー（進捗バー）
+  - AIナーチャリング統計（KPIカード）
+- [x] サイドバー「分析」セクションに「分析ダッシュボード」追加 ← 2026-04-02完了
+- [x] apps/web ビルド成功・Vercelデプロイ（https://web-delta-vert-34.vercel.app）← 2026-04-02完了
+- [x] **動作テスト**: 管理画面でグラフ表示確認 ← 2026-04-02完了
+
+---
+
+---
+
+## Phase 5: リッチメニュー管理UI
+**完了条件:** 管理画面でリッチメニューの一覧・作成・削除・デフォルト設定ができること
+
+### 5-A: APIクライアント・型定義
+- [x] `apps/web/src/lib/api.ts` に RichMenu 型・API メソッド追加 ← 2026-04-02完了
+
+### 5-B: 管理画面 UI
+- [x] `/rich-menus` — リッチメニュー一覧ページ ← 2026-04-02完了
+  - 既存メニュー一覧（名前・エリア数・選択中フラグ・プレビュー）
+  - デフォルト設定ボタン / 削除ボタン / 画像アップロードモーダル
+  - 新規作成モーダル（JSON エディタ + 2分割/3分割/6分割テンプレート）
+- [x] サイドバーに「リッチメニュー」追加（配信セクション）← 2026-04-02完了
+- [x] apps/web ビルド・Vercelデプロイ確認 ← 2026-04-02完了
+- [x] **動作テスト**: 管理画面で一覧表示・作成・デフォルト設定・削除・画像アップロード確認 ← 2026-04-02完了
+
+---
+
+## 📍 次回セッション引き継ぎ（最終更新: 2026-04-02）
+- 現在取り組んでいる箇所: **Phase 5 完了・LIFF セットアップ完了**
+- **次にやること:** Phase 6 以降（未定）
+- 備考: `vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` を使う（リモートビルドが npm fallback するバグを回避）
+- LIFF設定:
+  - LIFF ID: 2009638091-3dH0uRjV
+  - LIFF URL: https://liff.line.me/2009638091-3dH0uRjV
+  - エンドポイント: https://line-harness.shibagaki.workers.dev/
+  - VITE_LIFF_ID: apps/worker/.env に記載
+  - LIFF_URL: wrangler secret に設定済み
 - AI設定状況（DB内、本番稼働中）:
   - Provider: Gemini 2.5 Flash（ID: 7c92e9b1-3e24-4c84-b21c-6e29bc76fe1e）
   - Persona: デフォルトAI（ID: 6413bf09-9755-4c46-9ca4-c90e455c04e6、max_tokens: 1000）
@@ -158,12 +210,14 @@
   - 管理画面: https://web-delta-vert-34.vercel.app（API_KEY: cb5a34aeee932f0b97998b8307115b7232d22947c2c906182ec3497d8582ac5c）
   - ポータル: https://portal-six-fawn.vercel.app（紹介コードでログイン、テスト用: test-taro）
   - Worker API: https://line-harness.shibagaki.workers.dev
+  - LIFF: https://liff.line.me/2009638091-3dH0uRjV
 - 注意事項:
-  - 管理画面Vercelデプロイ: リポジトリルートで `vercel deploy --prod`（ルートの vercel.json + .vercel/project.json が web プロジェクトを向いている）
+  - 管理画面Vercelデプロイ: `apps/web/` から `vercel pull && vercel build --prod && vercel deploy --prebuilt --prod`
   - ポータルVercelデプロイ: `apps/portal/` から `vercel deploy --prod` でOK
+  - Worker デプロイ: `apps/worker/` から `pnpm run deploy`（vite build + wrangler deploy）
   - Vercel installCommand: `npm i -g pnpm@9.15.4 && pnpm install --no-frozen-lockfile`（lockfileバージョン不一致のため固定）
   - Cloudflare Workers では Buffer 未対応 → btoa/atob を使う
-  - LIFF_URL未設定のまま（未使用機能なので後回し）
   - Next.js static export では動的セグメント[id]はクエリパラメータ方式で実装
   - フロー実行エンジン: 待機ノードは resume_at をDBに保存し、cron（*/5 * * * *）でresumeWaitingFlowsを呼び出す
   - テストアフィリエイター「テスト太郎」（code: test-taro）がDB内に存在
+  - LINE Login チャネルには Messaging API チャネルのリンクが必要（友だち追加オプション用）
