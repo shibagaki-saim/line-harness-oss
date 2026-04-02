@@ -88,6 +88,14 @@
 
 ---
 
+## 2026-04-02 Vercel ハッシュ付きデプロイURLはSSO保護されPlaywrightからアクセス不可
+
+**教訓**: `web-abc123-project.vercel.app` 形式のデプロイURLはVercelのSSO保護が掛かっており、ブラウザ（Playwright）からアクセスすると `vercel.com/login` にリダイレクトされる。テスト・外部アクセスにはプロジェクトの stableエイリアス（`web-delta-vert-34.vercel.app` 等）を使う。
+**背景**: 最新デプロイURLを `BASE_URL` に指定してPlaywrightを実行したところ全テストがVercel SSO認証でブロックされ失敗した。
+**適用場面**: PlaywrightテストのbaseURLを設定するとき。`vercel alias ls` でstableエイリアスを確認してから設定する。
+
+---
+
 ## 2026-04-02 LIFF アプリは LINE Login チャネルに Messaging API チャネルのリンクが必要
 
 **教訓**: LIFF の「友だち追加オプション（Bot prompt: Aggressive）」を使うには、LINE Login チャネルに Messaging API チャネルの公式アカウントを Linked OA として紐付ける必要がある。未設定だと "There is no login bot linked to this channel" エラーになる。
