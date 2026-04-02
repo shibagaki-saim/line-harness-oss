@@ -315,11 +315,83 @@
 
 ---
 
+---
+
+## Phase 10: メール+パスワード認証
+**完了条件:** API キー入力なしで email + password でログインできること
+**優先度:** 高（UX改善・セキュリティ向上）
+**技術方針:**
+- パスワードハッシュ: PBKDF2-SHA256（10万回）※ Workers で bcrypt 非対応
+- セッション: KV_SESSIONS（TTL 7日）
+- 既存 env API_KEY 認証は残す（CC・curl 用）
+
+### 10-A: DB マイグレーション
+- [x] `migration 019_staff_password.sql` 作成・適用
+  - `staff_members` に `password_hash TEXT` カラム追加 ← 2026-04-02完了（--command フラグで直接適用）
+
+### 10-B: Worker — パスワードユーティリティ
+- [x] `apps/worker/src/services/password.ts` 新規作成 ← 2026-04-02完了
+  - `hashPassword(password)` → `{saltHex}:{hashHex}`（Web Crypto API PBKDF2-SHA256, 100k iterations）
+  - `verifyPassword(password, stored)` → boolean（定数時間比較）
+
+### 10-C: Worker — DB ヘルパー追加
+- [x] `packages/db/src/staff.ts` に追記 ← 2026-04-02完了
+  - `getStaffByEmail(db, email)` / `updateStaffPassword(db, id, hash)` / `countAllStaff(db)`
+
+### 10-D: Worker — 認証ルート新規作成
+- [x] `apps/worker/src/routes/auth.ts` 新規作成 ← 2026-04-02完了
+  - `POST /api/auth/login` / `POST /api/auth/logout` / `GET /api/auth/me` / `POST /api/auth/setup`
+- [x] `apps/worker/src/index.ts` にルート追加 ← 2026-04-02完了
+
+### 10-E: Worker — 認証ミドルウェア更新
+- [x] `apps/worker/src/middleware/auth.ts` 修正 ← 2026-04-02完了
+  - 優先順: KV_SESSIONS session_token → staff.api_key → env API_KEY
+
+### 10-F: Worker — スタッフ管理 API 更新
+- [x] `apps/worker/src/routes/staff.ts` 修正 ← 2026-04-02完了
+  - スタッフ作成時に `password` フィールド受付
+  - `POST /api/staff/:id/reset-password` 追加
+
+### 10-G: Web — ログインページ差し替え
+- [x] `apps/web/src/app/login/page.tsx` 全書き換え ← 2026-04-02完了
+  - email + password フォーム、`POST /api/auth/login` 呼び出し
+
+### 10-H: Web — API クライアント更新
+- [x] `apps/web/src/lib/api.ts` 修正 ← 2026-04-02完了
+  - `lh_api_key` → `lh_session_token`、401時自動 `/login` リダイレクト
+- [x] `apps/web/src/components/auth-guard.tsx` 修正 ← 2026-04-02完了
+- [x] `apps/web/src/components/layout/sidebar.tsx` ログアウト処理修正 ← 2026-04-02完了
+
+### 10-I: Web — スタッフ管理画面更新
+- [x] `apps/web/src/app/staff/page.tsx` 修正 ← 2026-04-02完了
+  - APIキー関連UI完全削除（バナー・APIキー列・キー再生成ボタン）
+  - スタッフ作成フォームにパスワード入力欄追加
+  - 「PW変更」ボタン + モーダル追加
+
+### 10-J: E2E テスト更新
+- [x] `apps/e2e/tests/` の `setupAuth()` を `lh_session_token` に変更 ← 2026-04-02完了
+- [x] `apps/e2e/tests/auth.spec.ts` 新規作成（5テスト全パス）← 2026-04-02完了
+  - ログイン成功 / 未入力でボタン無効 / 誤パスワードエラー / ログアウト / 未認証リダイレクト
+
+### 10-K: デプロイ・動作確認
+- [x] migration 適用（D1） ← 2026-04-02完了
+- [x] Worker デプロイ（v367133be）← 2026-04-02完了
+- [x] オーナーアカウント作成（admin@line-harness.local）← 2026-04-02完了
+- [x] Web ビルド・Vercel デプロイ ← 2026-04-02完了
+- [x] Playwright E2E テスト全パス（26+5 = 31テスト）← 2026-04-02完了
+
+---
+
 ## 📍 次回セッション引き継ぎ（最終更新: 2026-04-02）
-- 現在取り組んでいる箇所: **Phase 9 動作確認ツアー 完了**
+- 現在取り組んでいる箇所: **Phase 10 完了**
 - **次にやること:** Phase 6（配信セーフガード）または Phase 7（CTR計測）
-- Playwright: `apps/e2e/` — `pnpm exec playwright test` で全テスト実行（tour + interactions 計26テスト）
+- Playwright: `apps/e2e/` — `npx playwright test` で全テスト実行（tour + interactions + auth 計31テスト）
+  - ⚠️ `BASE_URL` 未指定時は `web-delta-vert-34.vercel.app`（stableエイリアス）を使用。ハッシュ付きURLはVercel SSO保護で失敗する
 - 備考: `vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` を使う（リモートビルドが npm fallback するバグを回避）
+- 管理画面ログイン:
+  - メール: admin@line-harness.local
+  - パスワード: Harness2024!
+  - ロール: owner
 - LIFF設定:
   - LIFF ID: 2009638091-3dH0uRjV
   - LIFF URL: https://liff.line.me/2009638091-3dH0uRjV
@@ -330,12 +402,12 @@
   - Provider: Gemini 2.5 Flash（ID: 7c92e9b1-3e24-4c84-b21c-6e29bc76fe1e）
   - Persona: デフォルトAI（ID: 6413bf09-9755-4c46-9ca4-c90e455c04e6、max_tokens: 1000）
 - URL一覧:
-  - 管理画面: https://web-delta-vert-34.vercel.app（API_KEY: cb5a34aeee932f0b97998b8307115b7232d22947c2c906182ec3497d8582ac5c）
+  - 管理画面: https://web-delta-vert-34.vercel.app（メールログイン方式に移行済み）
   - ポータル: https://portal-six-fawn.vercel.app（紹介コードでログイン、テスト用: test-taro）
   - Worker API: https://line-harness.shibagaki.workers.dev
   - LIFF: https://liff.line.me/2009638091-3dH0uRjV
 - 注意事項:
-  - 管理画面Vercelデプロイ: `apps/web/` から `vercel pull && vercel build --prod && vercel deploy --prebuilt --prod`
+  - 管理画面Vercelデプロイ: ルートから `npx vercel --prod`
   - ポータルVercelデプロイ: `apps/portal/` から `vercel deploy --prod` でOK
   - Worker デプロイ: `apps/worker/` から `pnpm run deploy`（vite build + wrangler deploy）
   - Vercel installCommand: `npm i -g pnpm@9.15.4 && pnpm install --no-frozen-lockfile`（lockfileバージョン不一致のため固定）
@@ -344,3 +416,4 @@
   - フロー実行エンジン: 待機ノードは resume_at をDBに保存し、cron（*/5 * * * *）でresumeWaitingFlowsを呼び出す
   - テストアフィリエイター「テスト太郎」（code: test-taro）がDB内に存在
   - LINE Login チャネルには Messaging API チャネルのリンクが必要（友だち追加オプション用）
+  - E2E テスト `auth.spec.ts` でログアウトボタンは `.last()` を使う（DOMに2つ存在し1つ目は不可視）
