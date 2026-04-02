@@ -193,9 +193,69 @@
 
 ---
 
+---
+
+## Phase 6: 配信セーフガード
+**完了条件:** 大量配信・ブロードキャスト送信前に誤送信を防ぐ仕組みが動作すること
+**優先度:** 高（本番運用で取り返しのつかないミスを防ぐ）
+**参考:** upstream Issue #64
+
+### 6-A: Worker バックエンド
+- [ ] ブロードキャスト送信に `dry_run` クエリパラメータを追加（実際には送信せず件数・対象者を返す）
+- [ ] 1回の配信で送信可能な上限数を設定できる `max_recipients` バリデーション追加
+- [ ] 送信前に対象者リストのプレビューを返す `POST /api/broadcasts/:id/preview` エンドポイント追加
+
+### 6-B: 管理画面 UI
+- [ ] ブロードキャスト送信ボタンに「送信件数確認モーダル」を追加（対象人数・内容プレビューを表示してから送信）
+- [ ] dry_run 結果（対象件数・セグメント内訳）をモーダルに表示
+- [ ] 送信上限超過時の警告 UI
+
+---
+
+## Phase 7: CTR 計測・配信レポート
+**完了条件:** 配信ごとのクリック数・CTR を分析ダッシュボードで確認できること
+**優先度:** 高（既存の分析ダッシュボードを拡張するだけ）
+**参考:** upstream Issue #61
+
+### 7-A: DB・インフラ
+- [ ] `broadcast_clicks` テーブル追加（broadcast_id, tracked_link_id, clicked_at, friend_id）
+- [ ] migration 017_broadcast_clicks.sql 作成・適用
+
+### 7-B: Worker バックエンド
+- [ ] トラッキングリンクのクリック時に broadcast_id を紐付けて記録
+- [ ] `GET /api/analytics/broadcasts` レスポンスに CTR・クリック数を追加
+- [ ] `GET /api/broadcasts/:id/report` — 個別配信レポートエンドポイント追加
+
+### 7-C: 管理画面 UI
+- [ ] 分析ダッシュボード（`/analytics`）の配信グラフに CTR カラムを追加
+- [ ] ブロードキャスト一覧（`/broadcasts`）の各行に「レポート」ボタン追加
+- [ ] 個別配信レポートモーダル（送信数・到達数・クリック数・CTR・クリックした友だちリスト）
+
+---
+
+## Phase 8: LINE チャネルアクセストークン自動更新
+**完了条件:** アクセストークンの有効期限を監視し、期限切れ前に自動更新できること
+**優先度:** 中（長期運用で必須）
+**参考:** upstream v0.8.0 token_refresh サービス
+
+### 8-A: DB・インフラ
+- [ ] `line_accounts` テーブルに `token_expires_at` カラム追加（migration 018）
+
+### 8-B: Worker バックエンド
+- [ ] `apps/worker/src/services/token-refresh.ts` 実装
+  - LINE Channel Access Token 発行 API（`/oauth/v2.1/token`）呼び出し
+  - 有効期限30日未満になったら自動更新
+  - 更新後に D1 へ保存
+- [ ] cron（`0 0 * * *`）から `refreshExpiringTokens()` を呼び出す処理追加
+
+### 8-C: 管理画面 UI
+- [ ] `/health` ページにトークン有効期限の表示・手動更新ボタン追加
+
+---
+
 ## 📍 次回セッション引き継ぎ（最終更新: 2026-04-02）
 - 現在取り組んでいる箇所: **Phase 5 完了・LIFF セットアップ完了**
-- **次にやること:** Phase 6 以降（未定）
+- **次にやること:** Phase 6（配信セーフガード）から着手推奨
 - 備考: `vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` を使う（リモートビルドが npm fallback するバグを回避）
 - LIFF設定:
   - LIFF ID: 2009638091-3dH0uRjV
