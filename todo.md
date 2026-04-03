@@ -261,6 +261,8 @@
 - [x] `/health` ページにトークン有効期限バッジ（残日数・緑/黄/赤）表示 ← 2026-04-02完了
 - [x] 「トークン更新」ボタンで手動更新対応 ← 2026-04-02完了
 - [x] **動作確認**: Playwright テストで「残30日 (2026/5/2)」バッジと更新ボタン表示確認 ← 2026-04-02完了
+- [x] **E2E テスト**: `apps/e2e/tests/health.spec.ts` 新規作成・6テスト全パス ← 2026-04-03完了
+  - healthページ表示 / アカウントカード表示 / トークン有効期限バッジ / 更新ボタン / refresh-token API / tokenExpiresAt レスポンス確認
 
 ---
 
@@ -406,10 +408,9 @@
 ---
 
 ## 📍 次回セッション引き継ぎ（最終更新: 2026-04-02）
-- 現在取り組んでいる箇所: **Phase 8 完了**
-- **次にやること:** 残タスクなし（Phase 0〜10・Phase 6〜8 全完了）
-  - 必要に応じて新機能追加や改善タスクを検討する
-- Playwright: `apps/e2e/` — `npx playwright test` で全テスト実行（tour + interactions + auth + broadcasts 計38テスト）
+- 現在取り組んでいる箇所: **Phase 8 E2Eテスト完了・全フェーズ完了**
+- **次にやること:** バックログの `friends.line_account_id` 対応、または新機能追加
+- Playwright: `apps/e2e/` — `npx playwright test` で全テスト実行（auth + broadcasts + health + interactions + tour 計44テスト）
   - ⚠️ `BASE_URL` 未指定時は `web-delta-vert-34.vercel.app`（stableエイリアス）を使用。ハッシュ付きURLはVercel SSO保護で失敗する
 - 備考: `vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` を使う（リモートビルドが npm fallback するバグを回避）
 - 管理画面ログイン:
