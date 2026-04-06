@@ -104,6 +104,22 @@
 
 ---
 
+## 2026-04-06 Vercel デプロイ後は古いデプロイを即削除する
+
+**教訓**: `vercel deploy --prod` を実行するたびに古いデプロイURLが残り続ける。新規デプロイ後は `vercel ls web` で確認し、最新1件（本番エイリアスが指す deploy）以外を `vercel rm <url> --yes` で削除する。
+**背景**: 古いデプロイURLが生き続けており、ユーザーが誤ってアクセスするケースが発生した。
+**適用場面**: `vercel deploy --prod` 実行後。バッチ削除は `for url in ...; do vercel rm "$url" --yes; done` で対応可。
+
+---
+
+## 2026-04-06 管理画面ログインパスワードを仮パスワードに変更
+
+**教訓**: ログインできなくなった場合、既存 `API_KEY`（env変数）が auth middleware の fallback として残っているので、それを Bearer token として使って `POST /api/staff/:id/reset-password` でパスワードをリセットできる。または wrangler D1 に直接 `UPDATE staff_members SET password_hash=...` で書き込む方法も使える。
+**背景**: メール+パスワード認証移行後、D1の password_hash が古い値になっており staff のパスワードがわからなくなった。
+**適用場面**: ログイン不能になったとき・パスワードを忘れたとき。
+
+---
+
 ## 2026-04-02 LIFF アプリは LINE Login チャネルに Messaging API チャネルのリンクが必要
 
 **教訓**: LIFF の「友だち追加オプション（Bot prompt: Aggressive）」を使うには、LINE Login チャネルに Messaging API チャネルの公式アカウントを Linked OA として紐付ける必要がある。未設定だと "There is no login bot linked to this channel" エラーになる。

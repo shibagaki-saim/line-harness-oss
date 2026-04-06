@@ -407,15 +407,16 @@
 
 ---
 
-## 📍 次回セッション引き継ぎ（最終更新: 2026-04-02）
-- 現在取り組んでいる箇所: **Phase 8 E2Eテスト完了・全フェーズ完了**
+## 📍 次回セッション引き継ぎ（最終更新: 2026-04-06）
+- 現在取り組んでいる箇所: **全フェーズ完了・運用中**
 - **次にやること:** バックログの `friends.line_account_id` 対応、または新機能追加
 - Playwright: `apps/e2e/` — `npx playwright test` で全テスト実行（auth + broadcasts + health + interactions + tour 計44テスト）
   - ⚠️ `BASE_URL` 未指定時は `web-delta-vert-34.vercel.app`（stableエイリアス）を使用。ハッシュ付きURLはVercel SSO保護で失敗する
 - 備考: `vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` を使う（リモートビルドが npm fallback するバグを回避）
+- ⚠️ デプロイ後は古いデプロイを削除する（`vercel ls web` で確認し、最新1件以外を `vercel rm` で削除）
 - 管理画面ログイン:
   - メール: admin@line-harness.local
-  - パスワード: Harness2024!
+  - パスワード: LH-Admin-2026!
   - ロール: owner
 - LIFF設定:
   - LIFF ID: 2009638091-3dH0uRjV
