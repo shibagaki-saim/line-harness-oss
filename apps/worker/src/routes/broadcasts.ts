@@ -39,7 +39,7 @@ broadcasts.get('/api/broadcasts', async (c) => {
     let items: DbBroadcast[];
     if (lineAccountId) {
       const result = await c.env.DB
-        .prepare(`SELECT * FROM broadcasts WHERE line_account_id = ? ORDER BY created_at DESC`)
+        .prepare(`SELECT * FROM broadcasts WHERE (line_account_id = ? OR line_account_id IS NULL) ORDER BY created_at DESC`)
         .bind(lineAccountId)
         .all<DbBroadcast>();
       items = result.results;
@@ -204,6 +204,111 @@ broadcasts.post('/api/broadcasts/:id/send', async (c) => {
     return c.json({ success: true, data: result ? serializeBroadcast(result) : null });
   } catch (err) {
     console.error('POST /api/broadcasts/:id/send error:', err);
+    return c.json({ success: false, error: 'Internal server error' }, 500);
+  }
+});
+
+// GET /api/broadcasts/:id/report — 個別配信レポート（送信数・クリック数・CTR）
+broadcasts.get('/api/broadcasts/:id/report', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const broadcast = await getBroadcastById(c.env.DB, id);
+    if (!broadcast) {
+      return c.json({ success: false, error: 'Broadcast not found' }, 404);
+    }
+
+    // クリック数（このbroadcastに紐付いたもの）
+    const clickRow = await c.env.DB
+      .prepare(`SELECT COUNT(*) as cnt FROM link_clicks WHERE broadcast_id = ?`)
+      .bind(id)
+      .first<{ cnt: number }>();
+    const clickCount = clickRow?.cnt ?? 0;
+
+    // クリックした友だちリスト（ユニーク・最新10件）
+    const clicksResult = await c.env.DB
+      .prepare(
+        `SELECT lc.id, lc.friend_id, f.display_name, lc.clicked_at, tl.name as link_name, tl.original_url
+         FROM link_clicks lc
+         LEFT JOIN friends f ON f.id = lc.friend_id
+         LEFT JOIN tracked_links tl ON tl.id = lc.tracked_link_id
+         WHERE lc.broadcast_id = ?
+         ORDER BY lc.clicked_at DESC
+         LIMIT 50`,
+      )
+      .bind(id)
+      .all<{ id: string; friend_id: string | null; display_name: string | null; clicked_at: string; link_name: string | null; original_url: string | null }>();
+
+    const totalCount = broadcast.total_count;
+    const ctr = totalCount > 0 ? Math.round((clickCount / totalCount) * 1000) / 10 : null;
+
+    return c.json({
+      success: true,
+      data: {
+        broadcastId: id,
+        title: broadcast.title,
+        status: broadcast.status,
+        totalCount,
+        successCount: broadcast.success_count,
+        clickCount,
+        ctr,
+        sentAt: broadcast.sent_at,
+        clicks: clicksResult.results.map((r) => ({
+          id: r.id,
+          friendId: r.friend_id,
+          friendName: r.display_name,
+          clickedAt: r.clicked_at,
+          linkName: r.link_name,
+          originalUrl: r.original_url,
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('GET /api/broadcasts/:id/report error:', err);
+    return c.json({ success: false, error: 'Internal server error' }, 500);
+  }
+});
+
+// POST /api/broadcasts/:id/preview — 送信前確認（対象件数・内容を返す、実際には送信しない）
+broadcasts.post('/api/broadcasts/:id/preview', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const existing = await getBroadcastById(c.env.DB, id);
+
+    if (!existing) {
+      return c.json({ success: false, error: 'Broadcast not found' }, 404);
+    }
+
+    let recipientCount: number;
+    if (existing.target_type === 'all') {
+      const row = await c.env.DB
+        .prepare(`SELECT COUNT(*) as cnt FROM friends WHERE is_following = 1`)
+        .first<{ cnt: number }>();
+      recipientCount = row?.cnt ?? 0;
+    } else {
+      const row = await c.env.DB
+        .prepare(
+          `SELECT COUNT(*) as cnt FROM friends f
+           INNER JOIN friend_tags ft ON ft.friend_id = f.id
+           WHERE f.is_following = 1 AND ft.tag_id = ?`,
+        )
+        .bind(existing.target_tag_id)
+        .first<{ cnt: number }>();
+      recipientCount = row?.cnt ?? 0;
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        recipientCount,
+        title: existing.title,
+        messageType: existing.message_type,
+        messageContent: existing.message_content,
+        targetType: existing.target_type,
+        targetTagId: existing.target_tag_id,
+      },
+    });
+  } catch (err) {
+    console.error('POST /api/broadcasts/:id/preview error:', err);
     return c.json({ success: false, error: 'Internal server error' }, 500);
   }
 });
