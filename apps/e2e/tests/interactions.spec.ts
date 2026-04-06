@@ -5,7 +5,7 @@ const API_KEY = process.env.API_KEY || 'cb5a34aeee932f0b97998b8307115b7232d22947
 async function setupAuth(page: Page) {
   await page.goto('/')
   await page.evaluate((key) => {
-    localStorage.setItem('lh_api_key', key)
+    localStorage.setItem('lh_session_token', key)
     localStorage.setItem('lh_staff_name', 'E2Eテスト')
     localStorage.setItem('lh_staff_role', 'owner')
   }, API_KEY)
