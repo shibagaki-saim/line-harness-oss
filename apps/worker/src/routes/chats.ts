@@ -128,7 +128,7 @@ chats.get('/api/chats', async (c) => {
       bindings.push(operatorId);
     }
     if (lineAccountId) {
-      conditions.push('f.line_account_id = ?');
+      conditions.push('(f.line_account_id = ? OR f.line_account_id IS NULL)');
       bindings.push(lineAccountId);
     }
 

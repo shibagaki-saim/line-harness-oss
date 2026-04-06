@@ -63,7 +63,7 @@ friends.get('/api/friends', async (c) => {
       binds.push(tagId);
     }
     if (lineAccountId) {
-      conditions.push('f.line_account_id = ?');
+      conditions.push('(f.line_account_id = ? OR f.line_account_id IS NULL)');
       binds.push(lineAccountId);
     }
     if (search) {
