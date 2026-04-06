@@ -125,3 +125,19 @@
 **教訓**: LIFF の「友だち追加オプション（Bot prompt: Aggressive）」を使うには、LINE Login チャネルに Messaging API チャネルの公式アカウントを Linked OA として紐付ける必要がある。未設定だと "There is no login bot linked to this channel" エラーになる。
 **背景**: LIFF URL を開いたところエラーが表示され、Console の Linked OA 設定で解消した。
 **適用場面**: LIFF で友だち追加フローを実装するとき。
+
+---
+
+## 2026-04-06 DB migration は番号順に全て適用済みか確認してからAPIテストする
+
+**教訓**: D1 に migration を適用する際、schema.sql で初期テーブルを作成しても、その後の ALTER TABLE を含む migration ファイル（001〜xxx）が個別に適用されていないとカラム不足で500エラーになる。テスト実行前に `PRAGMA table_info(テーブル名)` で全カラムを確認する。
+**背景**: 003（ref_code）・004（metadata）・005（step_branching）・007（forms）が未適用で、それぞれの API が500エラーになっていた。特に005の未適用がシナリオステップ保存エラーの原因だった。
+**適用場面**: 新しい環境でプロジェクトをセットアップするとき、APIテストが500を返すとき。
+
+---
+
+## 2026-04-06 Playwright strict mode違反は .first() で解消する
+
+**教訓**: `page.getByRole('button', { name: '追加' })` や `page.getByText(/\d+件/)` が複数要素にマッチすると "strict mode violation: resolved to N elements" エラーになる。`.first()` または `.last()` を付けて一意に特定する。
+**背景**: モーダル内に「追加」ボタンが複数あり、テストが失敗した。
+**適用場面**: Playwright テストで locator が複数マッチする可能性があるとき。

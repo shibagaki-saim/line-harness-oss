@@ -410,7 +410,8 @@
 ## 📍 次回セッション引き継ぎ（最終更新: 2026-04-06）
 - 現在取り組んでいる箇所: **全フェーズ完了・運用中**
 - **次にやること:** バックログの `friends.line_account_id` 対応、または新機能追加
-- Playwright: `apps/e2e/` — `npx playwright test` で全テスト実行（auth + broadcasts + health + interactions + tour 計44テスト）
+- Playwright: `apps/e2e/` — `npx playwright test` で全テスト実行（117/120 passing、3 skip）
+  - テストファイル: auth / broadcasts / broadcasts-crud / health / interactions / tour / scenarios / templates / reminders / friends / rich-menus / flows / ai / analytics-affiliate
   - ⚠️ `BASE_URL` 未指定時は `web-delta-vert-34.vercel.app`（stableエイリアス）を使用。ハッシュ付きURLはVercel SSO保護で失敗する
 - 備考: `vercel pull --yes --environment=production && vercel build --prod && vercel deploy --prebuilt --prod` を使う（リモートビルドが npm fallback するバグを回避）
 - ⚠️ デプロイ後は古いデプロイを削除する（`vercel ls web` で確認し、最新1件以外を `vercel rm` で削除）
