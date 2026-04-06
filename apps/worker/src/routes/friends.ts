@@ -122,7 +122,7 @@ friends.get('/api/friends/count', async (c) => {
     const lineAccountId = c.req.query('lineAccountId');
     let count: number;
     if (lineAccountId) {
-      const row = await c.env.DB.prepare('SELECT COUNT(*) as count FROM friends WHERE is_following = 1 AND line_account_id = ?')
+      const row = await c.env.DB.prepare('SELECT COUNT(*) as count FROM friends WHERE is_following = 1 AND (line_account_id = ? OR line_account_id IS NULL)')
         .bind(lineAccountId).first<{ count: number }>();
       count = row?.count ?? 0;
     } else {
