@@ -19,7 +19,7 @@ notifications.get('/api/notifications/rules', async (c) => {
     let items;
     if (lineAccountId) {
       const result = await c.env.DB
-        .prepare(`SELECT * FROM notification_rules WHERE line_account_id = ? ORDER BY created_at DESC`)
+        .prepare(`SELECT * FROM notification_rules WHERE (line_account_id = ? OR line_account_id IS NULL) ORDER BY created_at DESC`)
         .bind(lineAccountId)
         .all();
       items = result.results as unknown as Awaited<ReturnType<typeof getNotificationRules>>;
