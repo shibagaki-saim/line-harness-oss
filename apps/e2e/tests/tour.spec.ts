@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 
-const API_KEY = process.env.API_KEY || 'REDACTED_API_KEY'
+const API_KEY = process.env.API_KEY || ''
 
 // ログイン状態をセットアップ（localStorage にセッショントークンを注入）
 async function setupAuth(page: Page) {

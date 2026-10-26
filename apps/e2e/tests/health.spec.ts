@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 
-const API_KEY = process.env.API_KEY || 'REDACTED_API_KEY'
+const API_KEY = process.env.API_KEY || ''
 const API_URL = process.env.API_URL || 'https://line-harness.shibagaki.workers.dev'
 
 async function setupAuth(page: Page) {
